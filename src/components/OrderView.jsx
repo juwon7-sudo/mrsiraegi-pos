@@ -129,25 +129,25 @@ export default function OrderView() {
     return (
       <div style={wrap}>
         <div className="app-scroll" style={{ flex: 1, overflowY: "auto", padding: "16px 18px 24px" }}>
-          <div style={{ display: "flex", justifyContent: "center", padding: "10px 0 8px", marginBottom: 26 }}>
-            <img src="/image.png" alt="미스터시래기" style={{ height: 42, width: "auto" }} />
+          <div style={{ display: "flex", justifyContent: "center", padding: "6px 0 4px", marginBottom: 22 }}>
+            <img src="/image.png" alt="미스터시래기" style={{ height: 34, width: "auto" }} />
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}>
-            <div style={{ fontFamily: serif, fontWeight: 700, fontSize: 22, color: ORDER.red }}>
-              {tableNo}번 테이블
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 22 }}>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 5, whiteSpace: "nowrap" }}>
+              <span style={{ fontFamily: serif, fontWeight: 700, fontSize: 24, color: ORDER.red, lineHeight: 1 }}>
+                {tableNo}
+              </span>
+              <span style={{ fontSize: 14, fontWeight: 700, color: ORDER.ink }}>번 테이블</span>
             </div>
             <div style={{ flex: 1 }} />
-            <button onClick={() => setTablePicker((v) => !v)} style={pill}>
+            <button onClick={() => setTablePicker((v) => !v)} style={{ ...pill, whiteSpace: "nowrap" }}>
               테이블 바꾸기 ▾
-            </button>
-            <button onClick={() => setTableNo(1)} style={pill}>
-              ← 전체
             </button>
           </div>
 
           {tablePicker && (
-            <div style={{ ...cardBox, padding: 12, marginBottom: 18 }}>
+            <div style={{ ...cardBox, padding: 10, marginBottom: 20 }}>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 8 }}>
                 {TABLES.map((t) => (
                   <button
@@ -157,12 +157,13 @@ export default function OrderView() {
                       setTablePicker(false);
                     }}
                     style={{
-                      padding: "12px 0",
-                      borderRadius: 12,
+                      padding: "13px 0",
+                      borderRadius: 10,
                       fontWeight: 700,
+                      fontSize: 15,
                       background: t === tableNo ? ORDER.ink : "#FFF",
                       color: t === tableNo ? "#FFF" : ORDER.ink,
-                      border: `1px solid ${ORDER.line}`,
+                      border: `1px solid ${t === tableNo ? ORDER.ink : ORDER.line}`,
                     }}
                   >
                     {t}
@@ -172,14 +173,14 @@ export default function OrderView() {
             </div>
           )}
 
-          <div style={{ fontFamily: serif, fontWeight: 700, fontSize: 24, marginBottom: 4 }}>
+          <div style={{ fontFamily: serif, fontWeight: 700, fontSize: 19, marginBottom: 3 }}>
             몇 분이 오셨나요?
           </div>
-          <div style={{ color: ORDER.muted, fontSize: 13.5, marginBottom: 12 }}>
+          <div style={{ color: ORDER.muted, fontSize: 12.5, marginBottom: 14 }}>
             한상 메뉴는 2인 이상 주문됩니다
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 10 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 9 }}>
             {PARTY_OPTIONS.map((p) => {
               const on = people === p.value;
               return (
@@ -187,15 +188,15 @@ export default function OrderView() {
                   key={p.value}
                   onClick={() => setPeople(p.value)}
                   style={{
-                    padding: "22px 0",
-                    borderRadius: 16,
-                    fontFamily: serif,
-                    fontWeight: 700,
-                    fontSize: 20,
+                    padding: "17px 0",
+                    borderRadius: 14,
+                    fontWeight: 600,
+                    fontSize: 16,
+                    letterSpacing: "-0.01em",
                     background: on ? ORDER.ink : "#FFF",
                     color: on ? "#FFF" : ORDER.ink,
-                    border: `1px solid ${on ? ORDER.ink : ORDER.line}`,
-                    boxShadow: "0 1px 2px rgba(0,0,0,.04)",
+                    border: `1.5px solid ${on ? ORDER.ink : ORDER.line}`,
+                    transition: "background .12s",
                   }}
                 >
                   {p.label}
@@ -238,8 +239,8 @@ export default function OrderView() {
 
         <div className="app-scroll" style={{ flex: 1, overflowY: "auto", padding: "6px 18px 20px" }}>
           <div style={{ display: "flex", alignItems: "baseline", gap: 8, margin: "8px 0 14px" }}>
-            <div style={{ fontFamily: serif, fontWeight: 700, fontSize: 20 }}>한상 메뉴</div>
-            <div style={{ color: ORDER.muted, fontSize: 13 }}>2인분부터</div>
+            <div style={{ fontFamily: serif, fontWeight: 700, fontSize: 18 }}>한상 메뉴</div>
+            <div style={{ color: ORDER.muted, fontSize: 12.5 }}>2인분부터</div>
           </div>
 
           {loading && <div style={{ color: ORDER.muted }}>메뉴 불러오는 중…</div>}
@@ -270,15 +271,15 @@ export default function OrderView() {
                 </div>
 
                 <div style={{ padding: 14 }}>
-                  <div style={{ fontFamily: serif, fontWeight: 700, fontSize: 21, marginBottom: 6 }}>
+                  <div style={{ fontFamily: serif, fontWeight: 700, fontSize: 18, marginBottom: 6 }}>
                     {m.name}
                   </div>
                   {m.description && (
-                    <div style={{ color: ORDER.muted, fontSize: 13.5, lineHeight: 1.6, marginBottom: 12 }}>
+                    <div style={{ color: ORDER.muted, fontSize: 12.5, lineHeight: 1.6, marginBottom: 12 }}>
                       {m.description}
                     </div>
                   )}
-                  <div style={{ fontSize: 14, marginBottom: 14 }}>
+                  <div style={{ fontSize: 13.5, marginBottom: 14 }}>
                     <span style={{ color: ORDER.muted }}>1인 </span>
                     <b>{wonLabel(m.price)}</b>
                     <span style={{ color: ORDER.muted }}> / {cnt}인 </span>
@@ -429,13 +430,13 @@ export default function OrderView() {
 
 /* ---------- 재사용 스타일 ---------- */
 const pill = {
-  padding: "8px 12px",
+  padding: "9px 14px",
   borderRadius: 999,
   background: "#FFF",
   border: `1px solid ${ORDER.line}`,
   color: ORDER.ink,
-  fontSize: 13,
-  fontWeight: 500,
+  fontSize: 12.5,
+  fontWeight: 600,
 };
 const cardBox = {
   background: ORDER.card,
@@ -444,13 +445,13 @@ const cardBox = {
 };
 const primaryBtn = {
   width: "100%",
-  padding: "16px 0",
-  borderRadius: 14,
+  padding: "15px 0",
+  borderRadius: 13,
   background: ORDER.red,
   color: "#FFF",
   fontWeight: 700,
-  fontSize: 16,
-  minHeight: 52,
+  fontSize: 15,
+  minHeight: 50,
 };
 const lightBtn = {
   width: "100%",

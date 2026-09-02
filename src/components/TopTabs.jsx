@@ -13,7 +13,7 @@ export default function TopTabs({ active, onChange }) {
       style={{
         flex: "0 0 auto",
         background: TABBAR_BG,
-        padding: "8px 10px",
+        padding: "7px 10px",
         display: "flex",
         gap: 6,
         justifyContent: "center",
@@ -28,13 +28,13 @@ export default function TopTabs({ active, onChange }) {
             style={{
               flex: 1,
               maxWidth: 150,
-              padding: "11px 0",
+              padding: "10px 0",
               borderRadius: 999,
               background: on ? "#FFFFFF" : "transparent",
               color: on ? "#1A1A1A" : TAB_INACTIVE,
               fontFamily: font,
               fontWeight: 700,
-              fontSize: 15,
+              fontSize: 14,
               transition: "background .15s",
             }}
           >
