@@ -8,6 +8,7 @@ import { TABBAR_BG } from "@/lib/constants";
 
 export default function Home() {
   const [tab, setTab] = useState("order");
+  const wide = tab === "counter"; // 카운터는 가로(와이드) 레이아웃
 
   return (
     <div
@@ -17,7 +18,7 @@ export default function Home() {
       <div
         style={{
           width: "100%",
-          maxWidth: 460,
+          maxWidth: wide ? 1280 : 460,
           minHeight: "100dvh",
           display: "flex",
           flexDirection: "column",

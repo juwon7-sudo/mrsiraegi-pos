@@ -156,8 +156,8 @@ export default function CounterView() {
               ))}
             </div>
 
-            {/* 테이블 그리드 */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 10 }}>
+            {/* 테이블 그리드 — 화면 폭에 맞춰 여러 열 (가로 태블릿 대응) */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(190px, 1fr))", gap: 10 }}>
               {TABLES.map((t) => {
                 const o = byTable[t];
                 if (!o) {
