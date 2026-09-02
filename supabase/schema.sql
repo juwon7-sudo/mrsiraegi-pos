@@ -23,6 +23,7 @@ create table if not exists public.pos_orders (
   people     int  not null,
   status     text not null default 'cooking' check (status in ('cooking','ready','done')),
   total      int  not null default 0,
+  pay_method text,                        -- card | cash | voucher (결제수단)
   created_at timestamptz not null default now()
 );
 

@@ -4,6 +4,13 @@ import { getSupabase } from "@/lib/supabaseClient";
 import { DARK, font, serif, TABLES } from "@/lib/constants";
 import { wonLabel, elapsedLabel, isSeoulToday } from "@/lib/format";
 
+const PAY_METHODS = [
+  { k: "card", label: "카드" },
+  { k: "cash", label: "현금" },
+  { k: "voucher", label: "상품권" },
+];
+const payLabel = (k) => PAY_METHODS.find((p) => p.k === k)?.label || "미지정";
+
 /* 카운터 화면 — 테이블 현황 / 매출 집계. 4초 폴링. */
 export default function CounterView() {
   const [seg, setSeg] = useState("tables"); // tables | sales
@@ -66,10 +73,13 @@ export default function CounterView() {
     }
   }
 
-  async function clearTable(order) {
+  async function settle(order, method) {
     try {
       const sb = getSupabase();
-      const { error } = await sb.from("pos_orders").update({ status: "done" }).eq("id", order.id);
+      const { error } = await sb
+        .from("pos_orders")
+        .update({ status: "done", pay_method: method })
+        .eq("id", order.id);
       if (error) throw error;
       setSheetTable(null);
       await load();
@@ -85,6 +95,16 @@ export default function CounterView() {
   });
 
   const salesTotal = doneToday.reduce((s, o) => s + (o.total || 0), 0);
+  const salesByMethod = doneToday.reduce((m, o) => {
+    const k = o.pay_method || "none";
+    m[k] = (m[k] || 0) + (o.total || 0);
+    return m;
+  }, {});
+  const countByMethod = doneToday.reduce((m, o) => {
+    const k = o.pay_method || "none";
+    m[k] = (m[k] || 0) + 1;
+    return m;
+  }, {});
 
   return (
     <div style={{ flex: 1, background: DARK.bg, color: DARK.ink, fontFamily: font, display: "flex", flexDirection: "column", minHeight: 0 }}>
@@ -240,6 +260,18 @@ export default function CounterView() {
                 완료 주문 {doneToday.length}건
               </div>
             </div>
+            {doneToday.length > 0 && (
+              <div style={{ background: DARK.card, borderRadius: 16, padding: "6px 16px", marginTop: 12, border: `1px solid ${DARK.line}` }}>
+                <div style={{ color: DARK.muted, fontSize: 12, padding: "10px 0 4px" }}>결제수단별</div>
+                {[...PAY_METHODS, ...((countByMethod.none || 0) > 0 ? [{ k: "none", label: "미지정" }] : [])].map((p, i, arr) => (
+                  <div key={p.k} style={{ display: "flex", alignItems: "center", padding: "12px 0", borderTop: i === 0 ? `1px solid ${DARK.line}` : "none", borderBottom: i < arr.length - 1 ? `1px solid ${DARK.line}` : "none" }}>
+                    <div style={{ flex: 1, fontSize: 15, fontWeight: 700, color: p.k === "none" ? DARK.muted : DARK.ink }}>{p.label}</div>
+                    <div style={{ color: DARK.muted, fontSize: 13, marginRight: 12 }}>{countByMethod[p.k] || 0}건</div>
+                    <div style={{ fontWeight: 700, fontSize: 15, color: p.k === "none" ? DARK.muted : DARK.ink }}>{wonLabel(salesByMethod[p.k] || 0)}</div>
+                  </div>
+                ))}
+              </div>
+            )}
             {loaded && doneToday.length === 0 && (
               <div style={{ color: DARK.muted, textAlign: "center", marginTop: 20, fontSize: 13 }}>
                 오늘 완료된 주문이 아직 없습니다
@@ -274,12 +306,18 @@ export default function CounterView() {
                 <div style={{ color: DARK.muted }}>{wonLabel(it.amount)}</div>
               </div>
             ))}
-            <button
-              onClick={() => clearTable(sheetTable)}
-              style={{ width: "100%", marginTop: 16, padding: "16px 0", borderRadius: 14, background: DARK.green, color: "#0E2A16", fontWeight: 700, fontSize: 16, minHeight: 52 }}
-            >
-              결제 완료 (정리)
-            </button>
+            <div style={{ color: DARK.muted, fontSize: 13, margin: "16px 0 8px" }}>결제 수단을 누르면 정리됩니다</div>
+            <div style={{ display: "flex", gap: 8 }}>
+              {PAY_METHODS.map((p) => (
+                <button
+                  key={p.k}
+                  onClick={() => settle(sheetTable, p.k)}
+                  style={{ flex: 1, padding: "16px 0", borderRadius: 14, background: DARK.green, color: "#0E2A16", fontWeight: 700, fontSize: 16, minHeight: 56 }}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
             <button
               onClick={() => setSheetTable(null)}
               style={{ width: "100%", marginTop: 8, padding: "13px 0", borderRadius: 14, background: "transparent", color: DARK.muted, fontWeight: 700 }}
