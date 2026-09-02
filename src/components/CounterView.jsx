@@ -11,6 +11,8 @@ const PAY_METHODS = [
 ];
 const payLabel = (k) => PAY_METHODS.find((p) => p.k === k)?.label || "미지정";
 
+const SERVE_BLUE = "#6FA8DC"; // 서빙대기(주방 출고 완료, 홀 전달 전) 강조색
+
 /* 카운터 화면 — 테이블 현황 / 매출 집계. 4초 폴링. */
 export default function CounterView() {
   const [seg, setSeg] = useState("tables"); // tables | sales
@@ -202,8 +204,18 @@ export default function CounterView() {
                   );
                 }
                 const items = o.pos_order_items || [];
-                // 제공완료 = 모든 항목을 홀에서 가져감(taken)까지 완료
-                const ready = items.length > 0 && items.every((it) => it.taken);
+                // 상태 흐름: 조리중 → (주방 출고) 서빙대기 → (홀 가져감) 제공완료
+                const allTaken = items.length > 0 && items.every((it) => it.taken);
+                const allDispatched = items.length > 0 && items.every((it) => it.dispatched);
+                const state = allTaken ? "done" : allDispatched ? "serving" : "cooking";
+                const badgeLabel = state === "done" ? "제공완료" : state === "serving" ? "서빙대기" : "조리중";
+                const accent = state === "done" ? DARK.green : state === "serving" ? SERVE_BLUE : DARK.gold;
+                const badgeBg =
+                  state === "done"
+                    ? "rgba(95,190,119,.18)"
+                    : state === "serving"
+                    ? "rgba(111,168,220,.20)"
+                    : "rgba(227,178,62,.18)";
                 const rep = items[0]?.name || "주문";
                 return (
                   <button
@@ -212,7 +224,7 @@ export default function CounterView() {
                     style={{
                       textAlign: "left",
                       background: "#0F0F10",
-                      border: `1px solid ${ready ? DARK.green : DARK.gold}`,
+                      border: `1px solid ${accent}`,
                       borderRadius: 14,
                       padding: 14,
                       minHeight: 92,
@@ -230,11 +242,11 @@ export default function CounterView() {
                           fontWeight: 700,
                           padding: "3px 8px",
                           borderRadius: 999,
-                          background: ready ? "rgba(95,190,119,.18)" : "rgba(227,178,62,.18)",
-                          color: ready ? DARK.green : DARK.gold,
+                          background: badgeBg,
+                          color: accent,
                         }}
                       >
-                        {ready ? "제공완료" : "조리중"}
+                        {badgeLabel}
                       </div>
                     </div>
                     <div style={{ fontSize: 13, color: DARK.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>

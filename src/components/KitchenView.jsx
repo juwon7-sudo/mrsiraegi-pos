@@ -143,7 +143,7 @@ export default function KitchenView() {
                         minHeight: 44,
                       }}
                     >
-                      출고완료
+                      출고
                     </button>
                   )}
                 </div>

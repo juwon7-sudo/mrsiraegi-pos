@@ -47,7 +47,13 @@ export default function OrderView() {
 
   function goMenu() {
     if (!canProceed) return;
-    // 인원에 맞춰 최소 인원 미달 항목은 최소치로 초기화하지 않음(빈 상태로 시작)
+    // 인원을 정하면 메뉴 수량을 인원 수(최소 인원 보장)로 자동 세팅 →
+    // 담기 과정 없이 바로 − 수량 + 스텝퍼가 보인다.
+    const init = {};
+    menu.forEach((m) => {
+      init[m.id] = Math.max(m.min_people, people || m.min_people);
+    });
+    setQty(init);
     setStep("menu");
   }
 
@@ -123,11 +129,11 @@ export default function OrderView() {
     return (
       <div style={wrap}>
         <div className="app-scroll" style={{ flex: 1, overflowY: "auto", padding: "16px 18px 24px" }}>
-          <div style={{ display: "flex", justifyContent: "center", marginBottom: 14 }}>
-            <img src="/image.png" alt="미스터시래기" style={{ height: 30, width: "auto" }} />
+          <div style={{ display: "flex", justifyContent: "center", padding: "10px 0 8px", marginBottom: 26 }}>
+            <img src="/image.png" alt="미스터시래기" style={{ height: 42, width: "auto" }} />
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 18 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}>
             <div style={{ fontFamily: serif, fontWeight: 700, fontSize: 22, color: ORDER.red }}>
               {tableNo}번 테이블
             </div>
@@ -166,10 +172,10 @@ export default function OrderView() {
             </div>
           )}
 
-          <div style={{ fontFamily: serif, fontWeight: 700, fontSize: 26, marginBottom: 6 }}>
+          <div style={{ fontFamily: serif, fontWeight: 700, fontSize: 24, marginBottom: 4 }}>
             몇 분이 오셨나요?
           </div>
-          <div style={{ color: ORDER.muted, fontSize: 14, marginBottom: 20 }}>
+          <div style={{ color: ORDER.muted, fontSize: 13.5, marginBottom: 12 }}>
             한상 메뉴는 2인 이상 주문됩니다
           </div>
 
