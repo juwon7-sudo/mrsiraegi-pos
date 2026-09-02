@@ -75,11 +75,17 @@ export default function CounterView() {
     }
   }
 
-  async function settle(sheet, method) {
+  async function settle(tableNo, method) {
     try {
       const sb = getSupabase();
-      const ids = (sheet.orders || []).map((o) => o.id);
-      if (ids.length === 0) return;
+      const os = active.filter((o) => o.table_no === tableNo);
+      const items = os.flatMap((o) => o.pos_order_items || []);
+      // 안전장치: 모든 음식을 가져감(제공완료)한 뒤에만 결제
+      if (items.length === 0 || !items.every((it) => it.taken)) {
+        setErr("아직 제공 전입니다. 모든 음식을 '가져감' 처리한 뒤 결제할 수 있습니다.");
+        return;
+      }
+      const ids = os.map((o) => o.id);
       const { error } = await sb
         .from("pos_orders")
         .update({ status: "done", pay_method: method })
@@ -226,7 +232,7 @@ export default function CounterView() {
                 return (
                   <button
                     key={t}
-                    onClick={() => setSheetTable({ table_no: t, orders: os, items, total })}
+                    onClick={() => setSheetTable(t)}
                     style={{
                       textAlign: "left",
                       background: "#0F0F10",
@@ -301,52 +307,95 @@ export default function CounterView() {
         )}
       </div>
 
-      {/* 결제/정리 시트 */}
-      {sheetTable && (
-        <div
-          onClick={() => setSheetTable(null)}
-          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.55)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 40 }}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{ width: "100%", maxWidth: 460, background: DARK.card, borderRadius: "20px 20px 0 0", padding: 20, borderTop: `1px solid ${DARK.line}` }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
-              <div style={{ fontFamily: serif, fontWeight: 700, fontSize: 22, color: DARK.gold }}>
-                {sheetTable.table_no}번 테이블
-              </div>
-              <div style={{ flex: 1 }} />
-              <div style={{ fontWeight: 700, fontSize: 18 }}>{wonLabel(sheetTable.total)}</div>
-            </div>
-            {(sheetTable.items || []).map((it) => (
-              <div key={it.id} style={{ display: "flex", padding: "8px 0", borderTop: `1px solid ${DARK.line}`, fontSize: 14 }}>
-                <div style={{ flex: 1 }}>
-                  {it.name} <span style={{ color: DARK.muted }}>{it.people}인</span>
-                </div>
-                <div style={{ color: DARK.muted }}>{wonLabel(it.amount)}</div>
-              </div>
-            ))}
-            <div style={{ color: DARK.muted, fontSize: 13, margin: "16px 0 8px" }}>결제 수단을 누르면 정리됩니다</div>
-            <div style={{ display: "flex", gap: 8 }}>
-              {PAY_METHODS.map((p) => (
-                <button
-                  key={p.k}
-                  onClick={() => settle(sheetTable, p.k)}
-                  style={{ flex: 1, padding: "16px 0", borderRadius: 14, background: DARK.green, color: "#0E2A16", fontWeight: 700, fontSize: 16, minHeight: 56 }}
-                >
-                  {p.label}
-                </button>
-              ))}
-            </div>
-            <button
+      {/* 결제/정리 시트 — 활성 데이터에서 실시간으로 다시 계산 */}
+      {sheetTable != null &&
+        (() => {
+          const os = byTable[sheetTable] || [];
+          const items = os.flatMap((o) => o.pos_order_items || []);
+          const total = os.reduce((s, o) => s + (o.total || 0), 0);
+          const canPay = items.length > 0 && items.every((it) => it.taken);
+          return (
+            <div
               onClick={() => setSheetTable(null)}
-              style={{ width: "100%", marginTop: 8, padding: "13px 0", borderRadius: 14, background: "transparent", color: DARK.muted, fontWeight: 700 }}
+              style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.55)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 40 }}
             >
-              닫기
-            </button>
-          </div>
-        </div>
-      )}
+              <div
+                onClick={(e) => e.stopPropagation()}
+                style={{ width: "100%", maxWidth: 460, background: DARK.card, borderRadius: "20px 20px 0 0", padding: 20, borderTop: `1px solid ${DARK.line}` }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+                  <div style={{ fontFamily: serif, fontWeight: 700, fontSize: 22, color: DARK.gold }}>
+                    {sheetTable}번 테이블
+                  </div>
+                  <div style={{ flex: 1 }} />
+                  <div style={{ fontWeight: 700, fontSize: 18 }}>{wonLabel(total)}</div>
+                </div>
+
+                {items.length === 0 && (
+                  <div style={{ color: DARK.muted, fontSize: 14, padding: "10px 0" }}>주문이 없습니다.</div>
+                )}
+                {items.map((it) => (
+                  <div key={it.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 0", borderTop: `1px solid ${DARK.line}`, fontSize: 14 }}>
+                    <div style={{ flex: 1 }}>
+                      {it.name} <span style={{ color: DARK.muted }}>{it.people}인</span>
+                      <span style={{ color: DARK.muted }}> · {wonLabel(it.amount)}</span>
+                    </div>
+                    {it.taken ? (
+                      <div style={{ color: DARK.green, fontWeight: 700, fontSize: 13 }}>제공완료</div>
+                    ) : (
+                      <button
+                        onClick={() => takeItem(it)}
+                        style={{ background: DARK.green, color: "#0E2A16", fontWeight: 700, fontSize: 13, padding: "8px 14px", borderRadius: 10, minHeight: 38 }}
+                      >
+                        가져감
+                      </button>
+                    )}
+                  </div>
+                ))}
+
+                {canPay ? (
+                  <>
+                    <div style={{ color: DARK.muted, fontSize: 13, margin: "16px 0 8px" }}>결제 수단을 누르면 정리됩니다</div>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      {PAY_METHODS.map((p) => (
+                        <button
+                          key={p.k}
+                          onClick={() => settle(sheetTable, p.k)}
+                          style={{ flex: 1, padding: "16px 0", borderRadius: 14, background: DARK.green, color: "#0E2A16", fontWeight: 700, fontSize: 16, minHeight: 56 }}
+                        >
+                          {p.label}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <div
+                    style={{
+                      margin: "16px 0 4px",
+                      padding: "14px 12px",
+                      borderRadius: 12,
+                      background: "rgba(111,168,220,.14)",
+                      border: `1px solid ${SERVE_BLUE}`,
+                      color: SERVE_BLUE,
+                      fontSize: 13.5,
+                      fontWeight: 700,
+                      textAlign: "center",
+                    }}
+                  >
+                    아직 제공 전입니다 · 모든 음식을 <span style={{ textDecoration: "underline" }}>가져감</span> 처리한 뒤 결제할 수 있습니다
+                  </div>
+                )}
+
+                <button
+                  onClick={() => setSheetTable(null)}
+                  style={{ width: "100%", marginTop: 8, padding: "13px 0", borderRadius: 14, background: "transparent", color: DARK.muted, fontWeight: 700 }}
+                >
+                  닫기
+                </button>
+              </div>
+            </div>
+          );
+        })()}
     </div>
   );
 }

@@ -309,7 +309,7 @@ export default function OrderView() {
               marginBottom: 20,
             }}
           >
-            진행 중 주문 확인 · 수정 →
+            주문 내역 · 수정 →
           </button>
 
           <div style={{ fontFamily: serif, fontWeight: 700, fontSize: 19, marginBottom: 3 }}>
@@ -374,8 +374,11 @@ export default function OrderView() {
         </div>
 
         <div className="app-scroll" style={{ flex: 1, overflowY: "auto", padding: "8px 18px 24px" }}>
-          <div style={{ fontFamily: serif, fontWeight: 700, fontSize: 18, margin: "6px 0 14px" }}>
-            진행 중 주문 수정 · 삭제
+          <div style={{ fontFamily: serif, fontWeight: 700, fontSize: 18, margin: "6px 0 4px" }}>
+            주문 내역
+          </div>
+          <div style={{ color: ORDER.muted, fontSize: 12.5, marginBottom: 14 }}>
+            수량 변경 후 <b>변경 저장</b>, 필요 없으면 <b>삭제</b>
           </div>
           {err && <div style={{ color: ORDER.red, fontSize: 13, marginBottom: 10 }}>{err}</div>}
           {manageLoading && <div style={{ color: ORDER.muted, fontSize: 13.5 }}>불러오는 중…</div>}
@@ -462,8 +465,11 @@ export default function OrderView() {
         </div>
 
         <BottomBar>
-          <button onClick={() => setStep("table")} style={{ ...lightBtn }}>
-            인원 선택으로
+          <button onClick={() => setStep("table")} style={{ ...lightBtn, flex: 1 }}>
+            인원 선택
+          </button>
+          <button onClick={() => setStep("menu")} style={{ ...primaryBtn, flex: 1 }}>
+            추가 주문
           </button>
         </BottomBar>
       </div>
@@ -616,8 +622,8 @@ export default function OrderView() {
           </div>
 
           <div style={{ width: "100%", maxWidth: 320, display: "flex", flexDirection: "column", gap: 10 }}>
-            <button onClick={() => setStep("history")} style={{ ...primaryBtn }}>
-              주문 내역 보기
+            <button onClick={openManage} style={{ ...primaryBtn }}>
+              주문 내역 · 수정
             </button>
             <button onClick={() => setStep("menu")} style={lightBtn}>
               추가 주문하기
@@ -637,43 +643,7 @@ export default function OrderView() {
     );
   }
 
-  // ========== STEP: 주문 내역 (방금 전송한 내역) ==========
-  return (
-    <div style={wrap}>
-      <div style={topRow}>
-        <button onClick={() => setStep("confirm")} style={{ ...pill, fontWeight: 700 }}>
-          ← 뒤로
-        </button>
-        <div style={{ flex: 1 }} />
-        <div style={{ color: ORDER.red, fontWeight: 700 }}>{tableNo}번 테이블</div>
-      </div>
-      <div className="app-scroll" style={{ flex: 1, overflowY: "auto", padding: "8px 18px 20px" }}>
-        <div style={{ fontFamily: serif, fontWeight: 700, fontSize: 20, margin: "6px 0 14px" }}>
-          주문 내역
-        </div>
-        {lastItems.map((it, i) => (
-          <div key={i} style={{ ...cardBox, padding: 14, marginBottom: 10, display: "flex", alignItems: "center" }}>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 700, fontSize: 16 }}>{it.name}</div>
-              <div style={{ color: ORDER.muted, fontSize: 13 }}>{it.people}인</div>
-            </div>
-            <div style={{ fontWeight: 700, color: ORDER.red }}>{wonLabel(it.amount)}</div>
-          </div>
-        ))}
-        <div style={{ ...cardBox, padding: 14, marginTop: 6, display: "flex", alignItems: "center", background: "#FBF8F1" }}>
-          <div style={{ flex: 1, fontWeight: 700 }}>합계</div>
-          <div style={{ fontWeight: 700, fontSize: 18, color: ORDER.red }}>
-            {wonLabel(lastItems.reduce((s, i) => s + i.amount, 0))}
-          </div>
-        </div>
-      </div>
-      <BottomBar>
-        <button onClick={() => setStep("menu")} style={{ ...primaryBtn }}>
-          추가 주문하기
-        </button>
-      </BottomBar>
-    </div>
-  );
+  return null;
 }
 
 /* ---------- 재사용 스타일 ---------- */
