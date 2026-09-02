@@ -1,0 +1,16 @@
+{
+  "name": "미스터시래기 롯데몰 수원점 주문",
+  "short_name": "미스터시래기",
+  "description": "미스터시래기 매장 주문 POS",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F4F1EA",
+  "theme_color": "#1A1A1A",
+  "lang": "ko",
+  "icons": [
+    { "src": "/app-icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/app-icon-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

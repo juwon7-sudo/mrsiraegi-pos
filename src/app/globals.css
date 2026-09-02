@@ -1,0 +1,27 @@
+@import url('https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Noto+Sans+KR:wght@400;500;700&display=swap');
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  background: #1A1A1A;
+  color: #1F1F1F;
+  font-family: 'Noto Sans KR', sans-serif;
+  font-size: 15px;
+  -webkit-text-size-adjust: 100%;
+}
+
+button, textarea, input, select {
+  font-family: 'Noto Sans KR', sans-serif;
+  font-size: inherit;
+}
+
+button { cursor: pointer; border: none; background: none; }
+
+img { max-width: 100%; display: block; }
+
+/* 앱 셸 — 전체 뷰포트 높이 (동적 뷰포트 폴백) */
+.app-outer { min-height: 100vh; min-height: 100dvh; }
+
+/* 스크롤바 최소화 */
+.app-scroll::-webkit-scrollbar { width: 0; height: 0; }
+.app-scroll { -ms-overflow-style: none; scrollbar-width: none; }

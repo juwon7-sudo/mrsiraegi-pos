@@ -1,0 +1,7 @@
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+# Next.js 런타임 (App Router) 지원
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
