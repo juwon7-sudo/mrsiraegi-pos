@@ -212,7 +212,7 @@ export default function CounterView() {
                           color: ready ? DARK.green : DARK.gold,
                         }}
                       >
-                        {ready ? "준비완료" : "조리중"}
+                        {ready ? "제공완료" : "조리중"}
                       </div>
                     </div>
                     <div style={{ fontSize: 13, color: DARK.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
