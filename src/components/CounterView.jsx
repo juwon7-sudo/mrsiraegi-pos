@@ -201,8 +201,10 @@ export default function CounterView() {
                     </div>
                   );
                 }
-                const ready = o.status === "ready";
-                const rep = (o.pos_order_items || [])[0]?.name || "주문";
+                const items = o.pos_order_items || [];
+                // 제공완료 = 모든 항목을 홀에서 가져감(taken)까지 완료
+                const ready = items.length > 0 && items.every((it) => it.taken);
+                const rep = items[0]?.name || "주문";
                 return (
                   <button
                     key={t}
