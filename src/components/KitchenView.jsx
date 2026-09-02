@@ -18,8 +18,8 @@ export default function KitchenView() {
     try {
       const sb = getSupabase();
       const { data, error } = await sb
-        .from("orders")
-        .select("*, order_items(*)")
+        .from("pos_orders")
+        .select("*, pos_order_items(*)")
         .neq("status", "done")
         .order("created_at", { ascending: true });
       if (error) throw error;
@@ -51,7 +51,7 @@ export default function KitchenView() {
     try {
       const sb = getSupabase();
       const { error } = await sb
-        .from("order_items")
+        .from("pos_order_items")
         .update({ dispatched: true })
         .eq("id", item.id);
       if (error) throw error;
@@ -61,7 +61,7 @@ export default function KitchenView() {
         (it) => it.id !== item.id && !it.dispatched
       );
       if (remaining.length === 0) {
-        await sb.from("orders").update({ status: "ready" }).eq("id", order.id);
+        await sb.from("pos_orders").update({ status: "ready" }).eq("id", order.id);
       }
       await load();
     } catch (e) {

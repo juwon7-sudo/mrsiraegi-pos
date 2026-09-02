@@ -26,7 +26,7 @@ export default function OrderView() {
       try {
         const sb = getSupabase();
         const { data, error } = await sb
-          .from("menu_items")
+          .from("pos_menu_items")
           .select("*")
           .eq("active", true)
           .order("sort", { ascending: true });
@@ -79,7 +79,7 @@ export default function OrderView() {
     try {
       const sb = getSupabase();
       const { data: order, error: oErr } = await sb
-        .from("orders")
+        .from("pos_orders")
         .insert({ table_no: tableNo, people, status: "cooking", total: totalAmount })
         .select()
         .single();
@@ -94,7 +94,7 @@ export default function OrderView() {
         dispatched: false,
         taken: false,
       }));
-      const { error: iErr } = await sb.from("order_items").insert(rows);
+      const { error: iErr } = await sb.from("pos_order_items").insert(rows);
       if (iErr) throw iErr;
 
       setLastItems(rows);

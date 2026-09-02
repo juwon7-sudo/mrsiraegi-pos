@@ -21,8 +21,8 @@ export default function CounterView() {
     try {
       const sb = getSupabase();
       const [a, d] = await Promise.all([
-        sb.from("orders").select("*, order_items(*)").neq("status", "done").order("created_at", { ascending: true }),
-        sb.from("orders").select("*").eq("status", "done").order("created_at", { ascending: false }).limit(500),
+        sb.from("pos_orders").select("*, pos_order_items(*)").neq("status", "done").order("created_at", { ascending: true }),
+        sb.from("pos_orders").select("*").eq("status", "done").order("created_at", { ascending: false }).limit(500),
       ]);
       if (a.error) throw a.error;
       if (d.error) throw d.error;
@@ -58,7 +58,7 @@ export default function CounterView() {
   async function takeItem(item) {
     try {
       const sb = getSupabase();
-      const { error } = await sb.from("order_items").update({ taken: true }).eq("id", item.id);
+      const { error } = await sb.from("pos_order_items").update({ taken: true }).eq("id", item.id);
       if (error) throw error;
       await load();
     } catch (e) {
@@ -69,7 +69,7 @@ export default function CounterView() {
   async function clearTable(order) {
     try {
       const sb = getSupabase();
-      const { error } = await sb.from("orders").update({ status: "done" }).eq("id", order.id);
+      const { error } = await sb.from("pos_orders").update({ status: "done" }).eq("id", order.id);
       if (error) throw error;
       setSheetTable(null);
       await load();
