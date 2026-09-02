@@ -25,7 +25,7 @@ export default function KitchenView() {
       if (error) throw error;
       // 미출고 항목이 하나라도 있는 주문만
       const list = (data || []).filter((o) =>
-        (o.order_items || []).some((it) => !it.dispatched)
+        (o.pos_order_items || []).some((it) => !it.dispatched)
       );
       setOrders(list);
       setErr("");
@@ -57,7 +57,7 @@ export default function KitchenView() {
       if (error) throw error;
 
       // 이 주문의 모든 항목이 출고되면 상태를 ready 로
-      const remaining = (order.order_items || []).filter(
+      const remaining = (order.pos_order_items || []).filter(
         (it) => it.id !== item.id && !it.dispatched
       );
       if (remaining.length === 0) {
@@ -85,7 +85,7 @@ export default function KitchenView() {
         )}
 
         {orders.map((o) => {
-          const items = o.order_items || [];
+          const items = o.pos_order_items || [];
           const done = items.filter((it) => it.dispatched).length;
           const rep = items[0]?.name || "주문";
           return (

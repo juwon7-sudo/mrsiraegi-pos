@@ -50,7 +50,7 @@ export default function CounterView() {
   // 나갈 음식: 출고됐지만 아직 안 가져간 항목
   const readyItems = [];
   active.forEach((o) => {
-    (o.order_items || []).forEach((it) => {
+    (o.pos_order_items || []).forEach((it) => {
       if (it.dispatched && !it.taken) readyItems.push({ ...it, table_no: o.table_no });
     });
   });
@@ -182,7 +182,7 @@ export default function CounterView() {
                   );
                 }
                 const ready = o.status === "ready";
-                const rep = (o.order_items || [])[0]?.name || "주문";
+                const rep = (o.pos_order_items || [])[0]?.name || "주문";
                 return (
                   <button
                     key={t}
@@ -266,7 +266,7 @@ export default function CounterView() {
               <div style={{ flex: 1 }} />
               <div style={{ fontWeight: 700, fontSize: 18 }}>{wonLabel(sheetTable.total)}</div>
             </div>
-            {(sheetTable.order_items || []).map((it) => (
+            {(sheetTable.pos_order_items || []).map((it) => (
               <div key={it.id} style={{ display: "flex", padding: "8px 0", borderTop: `1px solid ${DARK.line}`, fontSize: 14 }}>
                 <div style={{ flex: 1 }}>
                   {it.name} <span style={{ color: DARK.muted }}>{it.people}인</span>
