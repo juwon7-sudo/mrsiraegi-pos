@@ -67,9 +67,15 @@ create policy pos_items_insert on public.pos_order_items for insert to anon, aut
 drop policy if exists pos_items_update on public.pos_order_items;
 create policy pos_items_update on public.pos_order_items for update to anon, authenticated using (true) with check (true);
 
-grant select, update         on public.pos_menu_items  to anon, authenticated;
-grant select, insert, update on public.pos_orders      to anon, authenticated;
-grant select, insert, update on public.pos_order_items to anon, authenticated;
+-- 주문 삭제 (주문 화면에서 수정/삭제)
+drop policy if exists pos_orders_delete on public.pos_orders;
+create policy pos_orders_delete on public.pos_orders for delete to anon, authenticated using (true);
+drop policy if exists pos_items_delete on public.pos_order_items;
+create policy pos_items_delete on public.pos_order_items for delete to anon, authenticated using (true);
+
+grant select, update                 on public.pos_menu_items  to anon, authenticated;
+grant select, insert, update, delete on public.pos_orders      to anon, authenticated;
+grant select, insert, update, delete on public.pos_order_items to anon, authenticated;
 
 -- ---------- 시드: 한상 메뉴 1개 ----------
 insert into public.pos_menu_items (name, description, price, min_people, sort, active)

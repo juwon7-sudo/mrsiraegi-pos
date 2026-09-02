@@ -75,13 +75,15 @@ export default function CounterView() {
     }
   }
 
-  async function settle(order, method) {
+  async function settle(sheet, method) {
     try {
       const sb = getSupabase();
+      const ids = (sheet.orders || []).map((o) => o.id);
+      if (ids.length === 0) return;
       const { error } = await sb
         .from("pos_orders")
         .update({ status: "done", pay_method: method })
-        .eq("id", order.id);
+        .in("id", ids);
       if (error) throw error;
       setSheetTable(null);
       await load();
@@ -90,10 +92,10 @@ export default function CounterView() {
     }
   }
 
-  // 테이블 번호 → 활성 주문 매핑 (한 테이블에 여러 주문이면 가장 최근)
+  // 테이블 번호 → 활성 주문 배열 (한 테이블에 추가 주문이 여러 개일 수 있음)
   const byTable = {};
   active.forEach((o) => {
-    if (!byTable[o.table_no]) byTable[o.table_no] = o;
+    (byTable[o.table_no] || (byTable[o.table_no] = [])).push(o);
   });
 
   const salesTotal = doneToday.reduce((s, o) => s + (o.total || 0), 0);
@@ -181,8 +183,8 @@ export default function CounterView() {
             {/* 테이블 그리드 — 화면 폭에 맞춰 여러 열 (가로 태블릿 대응) */}
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(190px, 1fr))", gap: 10 }}>
               {TABLES.map((t) => {
-                const o = byTable[t];
-                if (!o) {
+                const os = byTable[t];
+                if (!os || os.length === 0) {
                   return (
                     <div
                       key={t}
@@ -203,7 +205,8 @@ export default function CounterView() {
                     </div>
                   );
                 }
-                const items = o.pos_order_items || [];
+                // 이 테이블의 모든 활성 주문 항목을 합쳐서 판정
+                const items = os.flatMap((o) => o.pos_order_items || []);
                 // 상태 흐름: 조리중 → (주방 출고) 서빙대기 → (홀 가져감) 제공완료
                 const allTaken = items.length > 0 && items.every((it) => it.taken);
                 const allDispatched = items.length > 0 && items.every((it) => it.dispatched);
@@ -217,10 +220,13 @@ export default function CounterView() {
                     ? "rgba(111,168,220,.20)"
                     : "rgba(227,178,62,.18)";
                 const rep = items[0]?.name || "주문";
+                const total = os.reduce((s, o) => s + (o.total || 0), 0);
+                const people = Math.max(...os.map((o) => o.people || 0));
+                const created = os[0]?.created_at; // 활성은 오래된 순 → 첫 주문 기준 경과
                 return (
                   <button
                     key={t}
-                    onClick={() => setSheetTable(o)}
+                    onClick={() => setSheetTable({ table_no: t, orders: os, items, total })}
                     style={{
                       textAlign: "left",
                       background: "#0F0F10",
@@ -250,11 +256,11 @@ export default function CounterView() {
                       </div>
                     </div>
                     <div style={{ fontSize: 13, color: DARK.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {rep} {o.people}인
+                      {rep} {people}인{os.length > 1 ? ` · 주문 ${os.length}건` : ""}
                     </div>
                     <div style={{ fontSize: 13, marginTop: "auto" }}>
-                      <b>{wonLabel(o.total)}</b>{" "}
-                      <span style={{ color: DARK.muted }}>{elapsedLabel(o.created_at)}</span>
+                      <b>{wonLabel(total)}</b>{" "}
+                      <span style={{ color: DARK.muted }}>{elapsedLabel(created)}</span>
                     </div>
                   </button>
                 );
@@ -312,7 +318,7 @@ export default function CounterView() {
               <div style={{ flex: 1 }} />
               <div style={{ fontWeight: 700, fontSize: 18 }}>{wonLabel(sheetTable.total)}</div>
             </div>
-            {(sheetTable.pos_order_items || []).map((it) => (
+            {(sheetTable.items || []).map((it) => (
               <div key={it.id} style={{ display: "flex", padding: "8px 0", borderTop: `1px solid ${DARK.line}`, fontSize: 14 }}>
                 <div style={{ flex: 1 }}>
                   {it.name} <span style={{ color: DARK.muted }}>{it.people}인</span>

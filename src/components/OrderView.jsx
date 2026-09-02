@@ -19,6 +19,11 @@ export default function OrderView() {
   const [submitting, setSubmitting] = useState(false);
   const [lastItems, setLastItems] = useState([]);
 
+  // 주문 수정/삭제(관리)
+  const [manageOrders, setManageOrders] = useState([]);
+  const [manageLoading, setManageLoading] = useState(false);
+  const [manageBusy, setManageBusy] = useState(false);
+
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -113,6 +118,123 @@ export default function OrderView() {
     }
   }
 
+  // ---------- 주문 수정/삭제 ----------
+  const minForItem = (it) =>
+    menu.find((m) => m.id === it.menu_id)?.min_people || 1;
+
+  async function openManage() {
+    setErr("");
+    setManageLoading(true);
+    setStep("manage");
+    try {
+      const sb = getSupabase();
+      const { data, error } = await sb
+        .from("pos_orders")
+        .select("*, pos_order_items(*)")
+        .eq("table_no", tableNo)
+        .neq("status", "done")
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      // 단가(_unit)를 기억해 수량 변경 시 금액을 다시 계산
+      const norm = (data || []).map((o) => ({
+        ...o,
+        pos_order_items: (o.pos_order_items || []).map((it) => ({
+          ...it,
+          _unit: it.people ? Math.round(it.amount / it.people) : it.amount,
+        })),
+      }));
+      setManageOrders(norm);
+    } catch (e) {
+      setErr("주문을 불러오지 못했습니다.");
+      setManageOrders([]);
+    } finally {
+      setManageLoading(false);
+    }
+  }
+
+  // 로컬 수량 변경(저장 전 미리보기)
+  function bumpItem(orderId, itemId, delta) {
+    setManageOrders((prev) =>
+      prev.map((o) =>
+        o.id !== orderId
+          ? o
+          : {
+              ...o,
+              pos_order_items: o.pos_order_items.map((it) => {
+                if (it.id !== itemId) return it;
+                const next = Math.max(minForItem(it), it.people + delta);
+                return { ...it, people: next, amount: it._unit * next };
+              }),
+            }
+      )
+    );
+  }
+
+  async function saveOrder(order) {
+    if (manageBusy) return;
+    setManageBusy(true);
+    setErr("");
+    try {
+      const sb = getSupabase();
+      for (const it of order.pos_order_items) {
+        const { error } = await sb
+          .from("pos_order_items")
+          .update({ people: it.people, amount: it.amount })
+          .eq("id", it.id);
+        if (error) throw error;
+      }
+      const total = order.pos_order_items.reduce((s, it) => s + it.amount, 0);
+      const { error: tErr } = await sb.from("pos_orders").update({ total }).eq("id", order.id);
+      if (tErr) throw tErr;
+      await openManage();
+    } catch (e) {
+      setErr("수정 저장에 실패했습니다.");
+    } finally {
+      setManageBusy(false);
+    }
+  }
+
+  async function deleteItem(order, item) {
+    if (manageBusy) return;
+    if (!window.confirm(`${item.name} 항목을 삭제할까요?`)) return;
+    setManageBusy(true);
+    setErr("");
+    try {
+      const sb = getSupabase();
+      const { error } = await sb.from("pos_order_items").delete().eq("id", item.id);
+      if (error) throw error;
+      const rest = order.pos_order_items.filter((x) => x.id !== item.id);
+      if (rest.length === 0) {
+        await sb.from("pos_orders").delete().eq("id", order.id);
+      } else {
+        const total = rest.reduce((s, x) => s + x.amount, 0);
+        await sb.from("pos_orders").update({ total }).eq("id", order.id);
+      }
+      await openManage();
+    } catch (e) {
+      setErr("항목 삭제에 실패했습니다.");
+    } finally {
+      setManageBusy(false);
+    }
+  }
+
+  async function deleteOrder(order) {
+    if (manageBusy) return;
+    if (!window.confirm(`${order.table_no}번 테이블 주문 전체를 삭제할까요?`)) return;
+    setManageBusy(true);
+    setErr("");
+    try {
+      const sb = getSupabase();
+      const { error } = await sb.from("pos_orders").delete().eq("id", order.id);
+      if (error) throw error;
+      await openManage();
+    } catch (e) {
+      setErr("주문 삭제에 실패했습니다.");
+    } finally {
+      setManageBusy(false);
+    }
+  }
+
   // ---------- 공통 래퍼 ----------
   const wrap = {
     flex: 1,
@@ -173,6 +295,23 @@ export default function OrderView() {
             </div>
           )}
 
+          <button
+            onClick={openManage}
+            style={{
+              width: "100%",
+              padding: "12px 0",
+              borderRadius: 12,
+              background: "#FFF",
+              border: `1px solid ${ORDER.line}`,
+              color: ORDER.ink,
+              fontWeight: 600,
+              fontSize: 13.5,
+              marginBottom: 20,
+            }}
+          >
+            진행 중 주문 확인 · 수정 →
+          </button>
+
           <div style={{ fontFamily: serif, fontWeight: 700, fontSize: 19, marginBottom: 3 }}>
             몇 분이 오셨나요?
           </div>
@@ -216,6 +355,115 @@ export default function OrderView() {
             }}
           >
             {people ? `${people}인 · 메뉴 보기` : "인원을 선택하세요"}
+          </button>
+        </BottomBar>
+      </div>
+    );
+  }
+
+  // ========== STEP: 주문 수정/삭제 (관리) ==========
+  if (step === "manage") {
+    return (
+      <div style={wrap}>
+        <div style={topRow}>
+          <button onClick={() => setStep("table")} style={{ ...pill, fontWeight: 700 }}>
+            ← 뒤로
+          </button>
+          <div style={{ flex: 1 }} />
+          <div style={{ color: ORDER.red, fontWeight: 700 }}>{tableNo}번 테이블</div>
+        </div>
+
+        <div className="app-scroll" style={{ flex: 1, overflowY: "auto", padding: "8px 18px 24px" }}>
+          <div style={{ fontFamily: serif, fontWeight: 700, fontSize: 18, margin: "6px 0 14px" }}>
+            진행 중 주문 수정 · 삭제
+          </div>
+          {err && <div style={{ color: ORDER.red, fontSize: 13, marginBottom: 10 }}>{err}</div>}
+          {manageLoading && <div style={{ color: ORDER.muted, fontSize: 13.5 }}>불러오는 중…</div>}
+          {!manageLoading && manageOrders.length === 0 && (
+            <div style={{ color: ORDER.muted, textAlign: "center", marginTop: 50, fontSize: 13.5 }}>
+              이 테이블에 진행 중인 주문이 없습니다
+            </div>
+          )}
+
+          {manageOrders.map((o, oi) => {
+            const oTotal = o.pos_order_items.reduce((s, it) => s + it.amount, 0);
+            return (
+              <div key={o.id} style={{ ...cardBox, padding: 14, marginBottom: 14 }}>
+                <div style={{ display: "flex", alignItems: "baseline", marginBottom: 8 }}>
+                  <div style={{ fontWeight: 700, fontSize: 14 }}>주문 {oi + 1}</div>
+                  <div style={{ flex: 1 }} />
+                  <button
+                    onClick={() => deleteOrder(o)}
+                    style={{ fontSize: 12.5, fontWeight: 700, color: ORDER.red, background: "transparent", padding: "4px 6px" }}
+                  >
+                    주문 삭제
+                  </button>
+                </div>
+
+                {o.pos_order_items.map((it) => (
+                  <div
+                    key={it.id}
+                    style={{ padding: "10px 0", borderTop: `1px solid ${ORDER.line}`, display: "flex", alignItems: "center", gap: 10 }}
+                  >
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 700, fontSize: 14.5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {it.name}
+                      </div>
+                      <div style={{ color: ORDER.red, fontWeight: 700, fontSize: 13 }}>{wonLabel(it.amount)}</div>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <button
+                        onClick={() => bumpItem(o.id, it.id, -1)}
+                        disabled={it.people <= minForItem(it)}
+                        style={{ ...miniStep, background: "#F1EEE4", color: ORDER.ink, opacity: it.people <= minForItem(it) ? 0.4 : 1 }}
+                      >
+                        −
+                      </button>
+                      <div style={{ width: 38, textAlign: "center", fontWeight: 700, fontSize: 15 }}>{it.people}인</div>
+                      <button
+                        onClick={() => bumpItem(o.id, it.id, +1)}
+                        style={{ ...miniStep, background: ORDER.ink, color: "#FFF" }}
+                      >
+                        +
+                      </button>
+                      <button
+                        onClick={() => deleteItem(o, it)}
+                        style={{ marginLeft: 4, fontSize: 12.5, fontWeight: 700, color: ORDER.muted, background: "transparent", padding: "6px 4px" }}
+                      >
+                        삭제
+                      </button>
+                    </div>
+                  </div>
+                ))}
+
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 12 }}>
+                  <div style={{ flex: 1, fontWeight: 700, fontSize: 14 }}>
+                    합계 <span style={{ color: ORDER.red }}>{wonLabel(oTotal)}</span>
+                  </div>
+                  <button
+                    onClick={() => saveOrder(o)}
+                    disabled={manageBusy}
+                    style={{
+                      padding: "11px 20px",
+                      borderRadius: 12,
+                      background: ORDER.ink,
+                      color: "#FFF",
+                      fontWeight: 700,
+                      fontSize: 14,
+                      opacity: manageBusy ? 0.5 : 1,
+                    }}
+                  >
+                    변경 저장
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <BottomBar>
+          <button onClick={() => setStep("table")} style={{ ...lightBtn }}>
+            인원 선택으로
           </button>
         </BottomBar>
       </div>
@@ -469,6 +717,16 @@ const stepBtn = {
   height: 52,
   borderRadius: 12,
   fontSize: 24,
+  fontWeight: 700,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+};
+const miniStep = {
+  width: 38,
+  height: 38,
+  borderRadius: 10,
+  fontSize: 20,
   fontWeight: 700,
   display: "flex",
   alignItems: "center",
