@@ -98,6 +98,22 @@ export default function CounterView() {
     }
   }
 
+  // 매출 취소: 결제 완료(done)를 되돌려 테이블 현황(제공완료)으로 복귀
+  async function cancelSale(order) {
+    if (!window.confirm(`${order.table_no}번 테이블 매출을 취소할까요?\n(테이블 현황으로 되돌아가 다시 결제할 수 있습니다)`)) return;
+    try {
+      const sb = getSupabase();
+      const { error } = await sb
+        .from("pos_orders")
+        .update({ status: "ready", pay_method: null })
+        .eq("id", order.id);
+      if (error) throw error;
+      await load();
+    } catch (e) {
+      setErr("매출 취소에 실패했습니다.");
+    }
+  }
+
   // 테이블 번호 → 활성 주문 배열 (한 테이블에 추가 주문이 여러 개일 수 있음)
   const byTable = {};
   active.forEach((o) => {
@@ -294,6 +310,26 @@ export default function CounterView() {
                     <div style={{ flex: 1, fontSize: 15, fontWeight: 700, color: p.k === "none" ? DARK.muted : DARK.ink }}>{p.label}</div>
                     <div style={{ color: DARK.muted, fontSize: 13, marginRight: 12 }}>{countByMethod[p.k] || 0}건</div>
                     <div style={{ fontWeight: 700, fontSize: 15, color: p.k === "none" ? DARK.muted : DARK.ink }}>{wonLabel(salesByMethod[p.k] || 0)}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {doneToday.length > 0 && (
+              <div style={{ background: DARK.card, borderRadius: 16, padding: "6px 16px 10px", marginTop: 12, border: `1px solid ${DARK.line}` }}>
+                <div style={{ color: DARK.muted, fontSize: 12, padding: "10px 0 4px" }}>완료 주문 · 매출취소</div>
+                {doneToday.map((o, i) => (
+                  <div key={o.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 0", borderTop: i === 0 ? "none" : `1px solid ${DARK.line}` }}>
+                    <div style={{ color: DARK.gold, fontWeight: 700, width: 38, fontSize: 14 }}>{o.table_no}번</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 700, fontSize: 14 }}>{wonLabel(o.total)}</div>
+                      <div style={{ color: DARK.muted, fontSize: 12 }}>{payLabel(o.pay_method)}</div>
+                    </div>
+                    <button
+                      onClick={() => cancelSale(o)}
+                      style={{ background: "transparent", color: "#E88", fontWeight: 700, fontSize: 13, padding: "8px 12px", borderRadius: 10, border: `1px solid ${DARK.line}`, minHeight: 38 }}
+                    >
+                      매출취소
+                    </button>
                   </div>
                 ))}
               </div>

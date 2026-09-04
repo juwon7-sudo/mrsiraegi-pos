@@ -50,14 +50,20 @@ export default function OrderView() {
 
   const canProceed = people != null;
 
+  // 인원 수에 맞는 메뉴만 (1명 → 1인 메뉴, 2명+ → 2인 이상 한상)
+  function menuForPeople(n) {
+    return menu.filter((m) => (m.min_people || 1) <= (n || 1));
+  }
+
   function goMenu() {
     if (!canProceed) return;
-    // 인원을 정하면 메뉴 수량을 인원 수(최소 인원 보장)로 자동 세팅 →
-    // 담기 과정 없이 바로 − 수량 + 스텝퍼가 보인다.
+    // 해당 인원에 맞는 메뉴가 딱 1개면 담기 과정 없이 바로 − 수량 + 스텝퍼 표시.
+    const applicable = menuForPeople(people);
     const init = {};
-    menu.forEach((m) => {
-      init[m.id] = Math.max(m.min_people, people || m.min_people);
-    });
+    if (applicable.length === 1) {
+      const m = applicable[0];
+      init[m.id] = Math.max(m.min_people || 1, people || 1);
+    }
     setQty(init);
     setStep("menu");
   }
@@ -251,8 +257,8 @@ export default function OrderView() {
     return (
       <div style={wrap}>
         <div className="app-scroll" style={{ flex: 1, overflowY: "auto", padding: "16px 18px 24px" }}>
-          <div style={{ display: "flex", justifyContent: "center", padding: "6px 0 4px", marginBottom: 22 }}>
-            <img src="/image.png" alt="미스터시래기" style={{ height: 34, width: "auto" }} />
+          <div style={{ display: "flex", justifyContent: "center", padding: "6px 0 4px", marginBottom: 33 }}>
+            <img src="/image.png" alt="미스터시래기" style={{ height: 20, width: "auto" }} />
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 22 }}>
@@ -493,17 +499,25 @@ export default function OrderView() {
 
         <div className="app-scroll" style={{ flex: 1, overflowY: "auto", padding: "6px 18px 20px" }}>
           <div style={{ display: "flex", alignItems: "baseline", gap: 8, margin: "8px 0 14px" }}>
-            <div style={{ fontFamily: serif, fontWeight: 700, fontSize: 18 }}>한상 메뉴</div>
-            <div style={{ color: ORDER.muted, fontSize: 12.5 }}>2인분부터</div>
+            <div style={{ fontFamily: serif, fontWeight: 700, fontSize: 18 }}>
+              {people === 1 ? "1인 메뉴" : "한상 메뉴"}
+            </div>
+            <div style={{ color: ORDER.muted, fontSize: 12.5 }}>
+              {people === 1 ? "혼자 드실 수 있는 메뉴" : "2인분부터"}
+            </div>
           </div>
 
           {loading && <div style={{ color: ORDER.muted }}>메뉴 불러오는 중…</div>}
           {err && <div style={{ color: ORDER.red }}>{err}</div>}
-          {!loading && menu.length === 0 && (
-            <div style={{ color: ORDER.muted }}>등록된 메뉴가 없습니다.</div>
+          {!loading && menuForPeople(people).length === 0 && (
+            <div style={{ color: ORDER.muted, textAlign: "center", marginTop: 40, fontSize: 13.5 }}>
+              {people === 1
+                ? "등록된 1인 메뉴가 없습니다."
+                : "이 인원에 맞는 메뉴가 없습니다."}
+            </div>
           )}
 
-          {menu.map((m) => {
+          {menuForPeople(people).map((m) => {
             const added = qty[m.id] != null;
             const cnt = qty[m.id] || m.min_people;
             return (
