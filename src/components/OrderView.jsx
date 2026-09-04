@@ -560,20 +560,26 @@ export default function OrderView() {
                 </div>
 
                 <div style={{ padding: 14 }}>
-                  <div style={{ fontFamily: serif, fontWeight: 700, fontSize: 18, marginBottom: 6 }}>
-                    {m.name}
+                  {/* 이름 + 가격 한 줄 */}
+                  <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: m.description ? 6 : 12, flexWrap: "wrap" }}>
+                    <div style={{ fontFamily: serif, fontWeight: 700, fontSize: 18 }}>{m.name}</div>
+                    <div style={{ flex: 1 }} />
+                    <div style={{ fontSize: 13.5, whiteSpace: "nowrap" }}>
+                      <span style={{ color: ORDER.muted }}>1인 </span>
+                      <b>{wonLabel(m.price)}</b>
+                      {cnt > 1 && (
+                        <>
+                          <span style={{ color: ORDER.muted }}> / {cnt}인 </span>
+                          <b style={{ color: ORDER.red }}>{wonLabel(m.price * cnt)}</b>
+                        </>
+                      )}
+                    </div>
                   </div>
                   {m.description && (
                     <div style={{ color: ORDER.muted, fontSize: 12.5, lineHeight: 1.6, marginBottom: 12 }}>
                       {m.description}
                     </div>
                   )}
-                  <div style={{ fontSize: 13.5, marginBottom: 14 }}>
-                    <span style={{ color: ORDER.muted }}>1인 </span>
-                    <b>{wonLabel(m.price)}</b>
-                    <span style={{ color: ORDER.muted }}> / {cnt}인 </span>
-                    <b style={{ color: ORDER.red }}>{wonLabel(m.price * cnt)}</b>
-                  </div>
 
                   {!added ? (
                     <button onClick={() => addItem(m)} style={{ ...primaryBtn, padding: "13px 0" }}>
@@ -746,7 +752,7 @@ const topRow = {
 };
 const photoPlaceholder = {
   position: "relative",
-  height: 130,
+  height: 230,
   background: "linear-gradient(135deg,#8A5A3B 0%,#6E4126 60%,#4E2E1A 100%)",
   display: "flex",
   alignItems: "center",
