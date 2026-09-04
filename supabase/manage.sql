@@ -22,6 +22,10 @@ alter table public.pos_order_items add column if not exists station text not nul
 alter table public.pos_orders add column if not exists voided    boolean not null default false;
 alter table public.pos_orders add column if not exists voided_at timestamptz;
 
+-- 세트메뉴 구성품: [{ "name":"낙지", "station":"kitchen", "qty":2 }, ...]
+-- 값이 있으면 세트(고정가)로 취급하고, 주문 시 구성품마다 별도 출고 건으로 나뉜다.
+alter table public.pos_menu_items add column if not exists components jsonb not null default '[]'::jsonb;
+
 -- ---------- 2) 메뉴 사진 Storage 버킷 (공개 읽기) ----------
 insert into storage.buckets (id, name, public)
 values ('pos-menu', 'pos-menu', true)

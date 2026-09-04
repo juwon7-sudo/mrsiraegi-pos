@@ -57,6 +57,10 @@ export default function OrderView() {
     return menu.filter((m) => (m.min_people || 1) >= 2);
   }
 
+  // 세트메뉴(구성품 있음) 여부 · 수량 단위 최소값
+  const isSet = (m) => Array.isArray(m.components) && m.components.length > 0;
+  const unitMin = (m) => (isSet(m) ? 1 : m.min_people || 1);
+
   function goMenu() {
     if (!canProceed) return;
     // 해당 인원에 맞는 메뉴가 딱 1개면 담기 과정 없이 바로 − 수량 + 스텝퍼 표시.
@@ -64,21 +68,21 @@ export default function OrderView() {
     const init = {};
     if (applicable.length === 1) {
       const m = applicable[0];
-      init[m.id] = Math.max(m.min_people || 1, people || 1);
+      init[m.id] = isSet(m) ? 1 : Math.max(m.min_people || 1, people || 1);
     }
     setQty(init);
     setStep("menu");
   }
 
   function addItem(item) {
-    setQty((q) => ({ ...q, [item.id]: Math.max(item.min_people, people || item.min_people) }));
+    setQty((q) => ({ ...q, [item.id]: isSet(item) ? 1 : Math.max(item.min_people, people || item.min_people) }));
   }
   function stepQty(item, delta) {
     setQty((q) => {
       const cur = q[item.id];
       if (cur == null) return q;
       const next = cur + delta;
-      if (next < item.min_people) return q;
+      if (next < unitMin(item)) return q;
       return { ...q, [item.id]: next };
     });
   }
@@ -105,18 +109,46 @@ export default function OrderView() {
         .single();
       if (oErr) throw oErr;
 
-      const rows = selected.map((m) => {
-        const hall = m.station === "hall"; // 홀 출고 = 주방 조리 없이 바로 출고
-        return {
-          order_id: order.id,
-          menu_id: m.id,
-          name: m.name,
-          people: qty[m.id],
-          amount: m.price * qty[m.id],
-          station: hall ? "hall" : "kitchen",
-          dispatched: hall, // 홀 출고는 주방 출고 단계를 건너뛰고 바로 '나갈 음식'으로
-          taken: false,
-        };
+      const rows = [];
+      selected.forEach((m) => {
+        const units = qty[m.id]; // 단품=인원, 세트=세트 수
+        if (isSet(m)) {
+          // 세트 → 구성품마다 별도 출고 건. 금액은 구성품 인분 비율로 배분(합계=세트가×세트수).
+          const comps = m.components || [];
+          const setAmount = m.price * units;
+          const sumQty = comps.reduce((s, c) => s + (Number(c.qty) || 0), 0) || 1;
+          let allocated = 0;
+          comps.forEach((c, idx) => {
+            const hall = c.station === "hall";
+            const cq = (Number(c.qty) || 0) * units;
+            const amt = idx === comps.length - 1
+              ? setAmount - allocated
+              : Math.round((setAmount * (Number(c.qty) || 0)) / sumQty);
+            allocated += amt;
+            rows.push({
+              order_id: order.id,
+              menu_id: m.id,
+              name: c.name,
+              people: cq,
+              amount: amt,
+              station: hall ? "hall" : "kitchen",
+              dispatched: hall,
+              taken: false,
+            });
+          });
+        } else {
+          const hall = m.station === "hall";
+          rows.push({
+            order_id: order.id,
+            menu_id: m.id,
+            name: m.name,
+            people: units,
+            amount: m.price * units,
+            station: hall ? "hall" : "kitchen",
+            dispatched: hall,
+            taken: false,
+          });
+        }
       });
       const { error: iErr } = await sb.from("pos_order_items").insert(rows);
       if (iErr) throw iErr;
@@ -530,8 +562,13 @@ export default function OrderView() {
           )}
 
           {menuForPeople(people).map((m) => {
+            const set = isSet(m);
             const added = qty[m.id] != null;
-            const cnt = qty[m.id] || m.min_people;
+            const cnt = qty[m.id] || (set ? 1 : m.min_people);
+            const unit = set ? "세트" : "인";
+            const compSummary = set
+              ? (m.components || []).map((c) => `${c.name} ${c.qty}인`).join(" · ")
+              : "";
             return (
               <div
                 key={m.id}
@@ -551,7 +588,7 @@ export default function OrderView() {
                       style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
                     />
                   )}
-                  {added && <div style={addedBadge}>{cnt}인 담김</div>}
+                  {added && <div style={addedBadge}>{cnt}{unit} 담김</div>}
                   {!menuImageUrl(m.image_path) && (
                     <div style={{ fontFamily: serif, fontWeight: 700, fontSize: 22, color: "#FFF9EC" }}>
                       {m.name}
@@ -565,16 +602,36 @@ export default function OrderView() {
                     <div style={{ fontFamily: serif, fontWeight: 700, fontSize: 18 }}>{m.name}</div>
                     <div style={{ flex: 1 }} />
                     <div style={{ fontSize: 13.5, whiteSpace: "nowrap" }}>
-                      <span style={{ color: ORDER.muted }}>1인 </span>
-                      <b>{wonLabel(m.price)}</b>
-                      {cnt > 1 && (
+                      {set ? (
                         <>
-                          <span style={{ color: ORDER.muted }}> / {cnt}인 </span>
-                          <b style={{ color: ORDER.red }}>{wonLabel(m.price * cnt)}</b>
+                          <span style={{ color: ORDER.muted }}>세트 </span>
+                          <b>{wonLabel(m.price)}</b>
+                          {cnt > 1 && (
+                            <>
+                              <span style={{ color: ORDER.muted }}> / {cnt}세트 </span>
+                              <b style={{ color: ORDER.red }}>{wonLabel(m.price * cnt)}</b>
+                            </>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          <span style={{ color: ORDER.muted }}>1인 </span>
+                          <b>{wonLabel(m.price)}</b>
+                          {cnt > 1 && (
+                            <>
+                              <span style={{ color: ORDER.muted }}> / {cnt}인 </span>
+                              <b style={{ color: ORDER.red }}>{wonLabel(m.price * cnt)}</b>
+                            </>
+                          )}
                         </>
                       )}
                     </div>
                   </div>
+                  {set && compSummary && (
+                    <div style={{ color: ORDER.ink, fontSize: 12.5, marginBottom: m.description ? 4 : 12 }}>
+                      <span style={{ color: ORDER.muted }}>구성 · </span>{compSummary}
+                    </div>
+                  )}
                   {m.description && (
                     <div style={{ color: ORDER.muted, fontSize: 12.5, lineHeight: 1.6, marginBottom: 12 }}>
                       {m.description}
@@ -589,13 +646,13 @@ export default function OrderView() {
                     <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                       <button
                         onClick={() => stepQty(m, -1)}
-                        disabled={cnt <= m.min_people}
-                        style={{ ...stepBtn, background: "#F1EEE4", color: ORDER.ink, opacity: cnt <= m.min_people ? 0.4 : 1 }}
+                        disabled={cnt <= unitMin(m)}
+                        style={{ ...stepBtn, background: "#F1EEE4", color: ORDER.ink, opacity: cnt <= unitMin(m) ? 0.4 : 1 }}
                       >
                         −
                       </button>
                       <div style={{ flex: 1, textAlign: "center", fontWeight: 700, fontSize: 17 }}>
-                        {cnt}인
+                        {cnt}{unit}
                       </div>
                       <button
                         onClick={() => stepQty(m, +1)}
@@ -613,7 +670,7 @@ export default function OrderView() {
 
         <BottomBar>
           <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 700, fontSize: 15 }}>{totalCount}개 메뉴 · {totalPeople}인</div>
+            <div style={{ fontWeight: 700, fontSize: 15 }}>{totalCount}개 메뉴</div>
             <div style={{ color: ORDER.muted, fontSize: 13 }}>{wonLabel(totalAmount)}</div>
           </div>
           <button

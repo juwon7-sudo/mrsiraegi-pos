@@ -91,6 +91,18 @@ function MenuManager() {
   function edit(id, patch) {
     setRows((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)));
   }
+  function setComps(id, comps) {
+    edit(id, { components: comps });
+  }
+  function addComp(r) {
+    setComps(r.id, [...(r.components || []), { name: "", station: "kitchen", qty: 1 }]);
+  }
+  function editComp(r, i, patch) {
+    setComps(r.id, (r.components || []).map((c, idx) => (idx === i ? { ...c, ...patch } : c)));
+  }
+  function removeComp(r, i) {
+    setComps(r.id, (r.components || []).filter((_, idx) => idx !== i));
+  }
 
   async function addMenu() {
     setErr("");
@@ -121,6 +133,9 @@ function MenuManager() {
           min_people: Math.max(1, Number(r.min_people) || 1),
           active: !!r.active,
           station: r.station === "hall" ? "hall" : "kitchen",
+          components: (r.components || [])
+            .filter((c) => (c.name || "").trim())
+            .map((c) => ({ name: c.name.trim(), station: c.station === "hall" ? "hall" : "kitchen", qty: Math.max(1, Number(c.qty) || 1) })),
         })
         .eq("id", r.id);
       if (error) throw error;
@@ -210,7 +225,7 @@ function MenuManager() {
                 </div>
                 <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
                   <div style={{ flex: 1 }}>
-                    <div style={label}>1인 가격(원)</div>
+                    <div style={label}>{(r.components || []).length > 0 ? "세트 가격(원)" : "1인 가격(원)"}</div>
                     <input style={field} inputMode="numeric" value={r.price ?? 0} onChange={(e) => edit(r.id, { price: e.target.value.replace(/[^0-9]/g, "") })} />
                   </div>
                   <div style={{ width: 96 }}>
@@ -218,34 +233,78 @@ function MenuManager() {
                     <input style={field} inputMode="numeric" value={r.min_people ?? 1} onChange={(e) => edit(r.id, { min_people: e.target.value.replace(/[^0-9]/g, "") })} />
                   </div>
                 </div>
-                <div style={{ marginBottom: 10 }}>
-                  <div style={label}>출고 구분</div>
-                  <div style={{ display: "flex", gap: 8 }}>
-                    {[
-                      { k: "kitchen", label: "주방 출고", desc: "조리 후" },
-                      { k: "hall", label: "홀 출고", desc: "바로" },
-                    ].map((s) => {
-                      const on = (r.station || "kitchen") === s.k;
-                      return (
-                        <button
-                          key={s.k}
-                          onClick={() => edit(r.id, { station: s.k })}
-                          style={{
-                            flex: 1,
-                            padding: "10px 0",
-                            borderRadius: 10,
-                            fontWeight: 700,
-                            fontSize: 13,
-                            background: on ? DARK.elevated : "transparent",
-                            color: on ? DARK.gold : DARK.muted,
-                            border: `1px solid ${on ? DARK.gold : DARK.line}`,
-                          }}
-                        >
-                          {s.label} <span style={{ color: DARK.muted, fontWeight: 500 }}>· {s.desc}</span>
-                        </button>
-                      );
-                    })}
+
+                {/* 단품일 때만 단일 출고 구분 (세트는 구성품마다 지정) */}
+                {(r.components || []).length === 0 && (
+                  <div style={{ marginBottom: 10 }}>
+                    <div style={label}>출고 구분</div>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      {[
+                        { k: "kitchen", label: "주방 출고", desc: "조리 후" },
+                        { k: "hall", label: "홀 출고", desc: "바로" },
+                      ].map((s) => {
+                        const on = (r.station || "kitchen") === s.k;
+                        return (
+                          <button
+                            key={s.k}
+                            onClick={() => edit(r.id, { station: s.k })}
+                            style={{
+                              flex: 1,
+                              padding: "10px 0",
+                              borderRadius: 10,
+                              fontWeight: 700,
+                              fontSize: 13,
+                              background: on ? DARK.elevated : "transparent",
+                              color: on ? DARK.gold : DARK.muted,
+                              border: `1px solid ${on ? DARK.gold : DARK.line}`,
+                            }}
+                          >
+                            {s.label} <span style={{ color: DARK.muted, fontWeight: 500 }}>· {s.desc}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
+                )}
+
+                {/* 세트 구성품 — 있으면 세트메뉴(고정가), 주문 시 구성품마다 별도 출고 */}
+                <div style={{ marginBottom: 10, background: "#1F1F21", borderRadius: 10, border: `1px solid ${DARK.line}`, padding: 12 }}>
+                  <div style={{ display: "flex", alignItems: "center", marginBottom: (r.components || []).length ? 8 : 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700 }}>
+                      세트 구성 {(r.components || []).length > 0 && <span style={{ color: DARK.gold }}>· 세트메뉴</span>}
+                    </div>
+                    <div style={{ flex: 1 }} />
+                    <button onClick={() => addComp(r)} style={{ ...btnGhost, padding: "7px 12px", minHeight: 0, fontSize: 12 }}>+ 구성품</button>
+                  </div>
+                  {(r.components || []).length === 0 && (
+                    <div style={{ color: DARK.muted, fontSize: 11.5, marginTop: 8 }}>
+                      구성품을 추가하면 세트메뉴가 됩니다(가격은 세트 1개 기준). 구성품마다 주방/홀을 따로 지정하면 주문 시 별도 출고 건으로 나뉩니다.
+                    </div>
+                  )}
+                  {(r.components || []).map((c, i) => (
+                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+                      <input
+                        placeholder="품목(예: 낙지)"
+                        value={c.name || ""}
+                        onChange={(e) => editComp(r, i, { name: e.target.value })}
+                        style={{ ...field, flex: 1, padding: "8px 10px", fontSize: 13 }}
+                      />
+                      <input
+                        inputMode="numeric"
+                        value={c.qty ?? 1}
+                        onChange={(e) => editComp(r, i, { qty: e.target.value.replace(/[^0-9]/g, "") })}
+                        style={{ ...field, width: 46, padding: "8px 6px", fontSize: 13, textAlign: "center" }}
+                      />
+                      <span style={{ color: DARK.muted, fontSize: 12 }}>인</span>
+                      <button
+                        onClick={() => editComp(r, i, { station: (c.station === "hall" ? "kitchen" : "hall") })}
+                        style={{ padding: "8px 10px", borderRadius: 8, fontSize: 12, fontWeight: 700, border: `1px solid ${DARK.line}`, background: "transparent", color: c.station === "hall" ? "#6FA8DC" : DARK.gold, whiteSpace: "nowrap" }}
+                      >
+                        {c.station === "hall" ? "홀" : "주방"}
+                      </button>
+                      <button onClick={() => removeComp(r, i)} style={{ padding: "8px 8px", background: "transparent", color: "#E88", fontWeight: 700, fontSize: 12 }}>✕</button>
+                    </div>
+                  ))}
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                   <button
