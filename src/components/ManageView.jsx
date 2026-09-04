@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useRef, useMemo, useState } from "react";
 import { getSupabase, menuImageUrl } from "@/lib/supabaseClient";
 import { DARK, font, serif } from "@/lib/constants";
 import { wonLabel, won, seoulToday, seoulDate } from "@/lib/format";
@@ -9,6 +9,30 @@ const PAY_METHODS = [
   { k: "cash", label: "현금" },
   { k: "voucher", label: "상품권" },
 ];
+
+/* 입력값을 자체 보관하는 입력 — 부모 리렌더가 입력 중 값을 덮어써서
+   모바일 한글(IME) 조합이 끊기는 문제를 막는다. 포커스 중엔 외부 값 무시. */
+function LocalText({ value, onChangeText, filter, textarea, ...rest }) {
+  const [v, setV] = useState(value ?? "");
+  const focused = useRef(false);
+  useEffect(() => {
+    if (!focused.current) setV(value ?? "");
+  }, [value]);
+  const handle = (e) => {
+    const next = filter ? filter(e.target.value) : e.target.value;
+    setV(next);
+    onChangeText(next);
+  };
+  const props = {
+    ...rest,
+    value: v,
+    onFocus: () => (focused.current = true),
+    onBlur: () => (focused.current = false),
+    onChange: handle,
+  };
+  return textarea ? <textarea {...props} /> : <input {...props} />;
+}
+const digits = (s) => s.replace(/[^0-9]/g, "");
 
 /* 관리 화면 — 메뉴 편집 / 매출 분석 / 일 마감. 다크 테마, 와이드. */
 export default function ManageView() {
@@ -219,21 +243,21 @@ function MenuManager() {
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ marginBottom: 8 }}>
                   <div style={label}>메뉴 이름</div>
-                  <input style={field} value={r.name || ""} onChange={(e) => edit(r.id, { name: e.target.value })} />
+                  <LocalText style={field} value={r.name || ""} onChangeText={(t) => edit(r.id, { name: t })} />
                 </div>
                 <div style={{ marginBottom: 8 }}>
                   <div style={label}>설명</div>
-                  <textarea style={{ ...field, minHeight: 56, resize: "vertical" }} value={r.description || ""} onChange={(e) => edit(r.id, { description: e.target.value })} />
+                  <LocalText textarea style={{ ...field, minHeight: 56, resize: "vertical" }} value={r.description || ""} onChangeText={(t) => edit(r.id, { description: t })} />
                 </div>
 
                 <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
                   <div style={{ flex: 1 }}>
                     <div style={label}>{hasSet(r) ? "세트 가격(원)" : "1인 가격(원)"}</div>
-                    <input style={field} inputMode="numeric" value={r.price ?? 0} onChange={(e) => edit(r.id, { price: e.target.value.replace(/[^0-9]/g, "") })} />
+                    <LocalText style={field} inputMode="numeric" value={String(r.price ?? 0)} filter={digits} onChangeText={(t) => edit(r.id, { price: t })} />
                   </div>
                   <div style={{ width: 96 }}>
                     <div style={label}>최소 인원</div>
-                    <input style={field} inputMode="numeric" value={r.min_people ?? 1} onChange={(e) => edit(r.id, { min_people: e.target.value.replace(/[^0-9]/g, "") })} />
+                    <LocalText style={field} inputMode="numeric" value={String(r.min_people ?? 1)} filter={digits} onChangeText={(t) => edit(r.id, { min_people: t })} />
                   </div>
                 </div>
 
@@ -286,16 +310,17 @@ function MenuManager() {
                   )}
                   {(r.components || []).map((c, i) => (
                     <div key={i} style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6 }}>
-                      <input
+                      <LocalText
                         placeholder={`구성품 ${i + 1}`}
                         value={c.name || ""}
-                        onChange={(e) => editComp(r, i, { name: e.target.value })}
+                        onChangeText={(t) => editComp(r, i, { name: t })}
                         style={{ ...field, flex: 1, padding: "9px 10px", fontSize: 13 }}
                       />
-                      <input
+                      <LocalText
                         inputMode="numeric"
-                        value={c.qty ?? 1}
-                        onChange={(e) => editComp(r, i, { qty: e.target.value.replace(/[^0-9]/g, "") })}
+                        value={String(c.qty ?? 1)}
+                        filter={digits}
+                        onChangeText={(t) => editComp(r, i, { qty: t })}
                         style={{ ...field, width: 42, padding: "9px 4px", fontSize: 13, textAlign: "center" }}
                       />
                       <span style={{ color: DARK.muted, fontSize: 12 }}>인</span>
@@ -702,7 +727,7 @@ function ClosingPanel() {
 
       <div style={card}>
         <div style={label}>메모 (차이 사유 등)</div>
-        <textarea style={{ ...field, minHeight: 60, resize: "vertical" }} value={memo} onChange={(e) => setMemo(e.target.value)} placeholder="예: 현금 5,000원 부족 — 거스름돈 오차" />
+        <LocalText textarea style={{ ...field, minHeight: 60, resize: "vertical" }} value={memo} onChangeText={setMemo} placeholder="예: 현금 5,000원 부족 — 거스름돈 오차" />
         <button onClick={save} disabled={busy} style={{ ...btnGold, width: "100%", marginTop: 12, opacity: busy ? 0.5 : 1 }}>
           {busy ? "저장 중…" : "마감 저장"}
         </button>
