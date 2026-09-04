@@ -18,6 +18,10 @@ grant insert, delete on public.pos_menu_items to anon, authenticated;
 alter table public.pos_menu_items  add column if not exists station text not null default 'kitchen';
 alter table public.pos_order_items add column if not exists station text not null default 'kitchen';
 
+-- 매출 무효(취소) 감사 기록: 테이블로 복원하지 않고 매출에서만 제외, 내역은 보존
+alter table public.pos_orders add column if not exists voided    boolean not null default false;
+alter table public.pos_orders add column if not exists voided_at timestamptz;
+
 -- ---------- 2) 메뉴 사진 Storage 버킷 (공개 읽기) ----------
 insert into storage.buckets (id, name, public)
 values ('pos-menu', 'pos-menu', true)

@@ -300,13 +300,14 @@ function SalesAnalytics() {
 
   useEffect(() => { load(); }, [load]);
 
-  async function cancelSale(order) {
-    if (!window.confirm(`${order.table_no}번 · ${wonLabel(order.total)} 매출을 취소할까요?\n(테이블 현황으로 되돌아갑니다)`)) return;
+  // 매출 무효 처리(감사): 테이블로 복원하지 않고 매출에서만 제외, 내역은 보존
+  async function voidSale(order) {
+    if (!window.confirm(`${order.table_no}번 · ${wonLabel(order.total)} 매출을 취소(무효) 처리할까요?\n테이블로 복원되지 않으며, 취소 내역에만 남습니다.`)) return;
     setBusy(true);
     setErr("");
     try {
       const sb = getSupabase();
-      const { error } = await sb.from("pos_orders").update({ status: "ready", pay_method: null }).eq("id", order.id);
+      const { error } = await sb.from("pos_orders").update({ voided: true, voided_at: new Date().toISOString() }).eq("id", order.id);
       if (error) throw error;
       await load();
     } catch (e) {
@@ -316,12 +317,15 @@ function SalesAnalytics() {
     }
   }
 
-  const inRange = useMemo(() => {
+  // 기간 내 전체(무효 포함)와, 매출 집계용(무효 제외), 취소내역(무효만)
+  const inRangeAll = useMemo(() => {
     return orders.filter((o) => {
       const d = seoulDate(o.created_at);
       return d >= from && d <= to;
     });
   }, [orders, from, to]);
+  const inRange = useMemo(() => inRangeAll.filter((o) => !o.voided), [inRangeAll]);
+  const voidedList = useMemo(() => inRangeAll.filter((o) => o.voided), [inRangeAll]);
 
   const total = inRange.reduce((s, o) => s + (o.total || 0), 0);
   const orderCount = inRange.length;
@@ -427,7 +431,7 @@ function SalesAnalytics() {
                         {wonLabel(o.total)}
                         <span style={{ color: DARK.muted }}> · {seoulDate(o.created_at)}</span>
                       </div>
-                      <button onClick={() => cancelSale(o)} disabled={busy} style={{ background: "transparent", color: "#E88", fontWeight: 700, fontSize: 12.5, padding: "7px 12px", borderRadius: 10, border: `1px solid ${DARK.line}`, opacity: busy ? 0.5 : 1 }}>
+                      <button onClick={() => voidSale(o)} disabled={busy} style={{ background: "transparent", color: "#E88", fontWeight: 700, fontSize: 12.5, padding: "7px 12px", borderRadius: 10, border: `1px solid ${DARK.line}`, opacity: busy ? 0.5 : 1 }}>
                         매출취소
                       </button>
                     </div>
@@ -455,6 +459,29 @@ function SalesAnalytics() {
         {byDay.length === 0 && <div style={{ color: DARK.muted, fontSize: 13 }}>데이터 없음</div>}
         {byDay.map(([d, amt]) => (
           <Row key={d} left={d} mid="" right={wonLabel(amt)} />
+        ))}
+      </div>
+
+      {/* 취소(무효) 내역 — 감사용. 매출에서는 제외됨 */}
+      <div style={{ ...card, borderColor: "#5a3a3a" }}>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 6 }}>
+          <div style={{ fontWeight: 700, color: "#E88" }}>매출취소 내역</div>
+          <div style={{ color: DARK.muted, fontSize: 12 }}>
+            {voidedList.length}건 · {wonLabel(voidedList.reduce((s, o) => s + (o.total || 0), 0))} (매출 제외)
+          </div>
+        </div>
+        {voidedList.length === 0 && <div style={{ color: DARK.muted, fontSize: 13 }}>취소된 매출이 없습니다</div>}
+        {voidedList.map((o) => (
+          <div key={o.id} style={{ display: "flex", alignItems: "center", padding: "10px 0", borderTop: `1px solid ${DARK.line}` }}>
+            <div style={{ color: DARK.gold, fontWeight: 700, width: 40, fontSize: 13 }}>{o.table_no}번</div>
+            <div style={{ flex: 1, fontSize: 13 }}>
+              <span style={{ textDecoration: "line-through", color: DARK.muted }}>{wonLabel(o.total)}</span>
+              <span style={{ color: DARK.muted }}> · {o.pay_method ? o.pay_method : "미지정"}</span>
+            </div>
+            <div style={{ color: DARK.muted, fontSize: 12 }}>
+              {o.voided_at ? `${seoulDate(o.voided_at)} 취소` : "취소"}
+            </div>
+          </div>
         ))}
       </div>
     </>
@@ -525,7 +552,7 @@ function ClosingPanel() {
   useEffect(() => { load(); }, [load]);
   useEffect(() => { loadPast(); }, [loadPast]);
 
-  const dayOrders = orders.filter((o) => seoulDate(o.created_at) === date);
+  const dayOrders = orders.filter((o) => seoulDate(o.created_at) === date && !o.voided);
   const sys = {
     card: dayOrders.filter((o) => o.pay_method === "card").reduce((s, o) => s + (o.total || 0), 0),
     cash: dayOrders.filter((o) => o.pay_method === "cash").reduce((s, o) => s + (o.total || 0), 0),

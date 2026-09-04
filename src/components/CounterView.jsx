@@ -36,7 +36,7 @@ export default function CounterView() {
       if (a.error) throw a.error;
       if (d.error) throw d.error;
       setActive(a.data || []);
-      setDoneToday((d.data || []).filter((o) => isSeoulToday(o.created_at)));
+      setDoneToday((d.data || []).filter((o) => isSeoulToday(o.created_at) && !o.voided));
       setErr("");
     } catch (e) {
       setErr("카운터 정보를 불러오지 못했습니다.");
