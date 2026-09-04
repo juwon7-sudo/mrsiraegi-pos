@@ -91,16 +91,19 @@ function MenuManager() {
   function edit(id, patch) {
     setRows((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)));
   }
-  // 세트: 주방 출고 / 홀 출고 두 칸으로만 관리 (각 칸 = 품목명 + 인분)
-  function editStation(r, station, patch) {
-    const list = r.components || [];
-    const idx = list.findIndex((c) => c.station === station);
-    let next;
-    if (idx >= 0) next = list.map((c, i) => (i === idx ? { ...c, ...patch, station } : c));
-    else next = [...list, { name: "", qty: 1, station, ...patch }];
-    edit(r.id, { components: next });
+  // 세트 구성품 목록 관리 (구성품마다 품목명 + 인분 + 주방/홀 개별 선택)
+  function setComps(id, comps) {
+    edit(id, { components: comps });
   }
-  const stationComp = (r, station) => (r.components || []).find((c) => c.station === station) || { name: "", qty: 1, station };
+  function addComp(r) {
+    setComps(r.id, [...(r.components || []), { name: "", station: "kitchen", qty: 1 }]);
+  }
+  function editComp(r, i, patch) {
+    setComps(r.id, (r.components || []).map((c, idx) => (idx === i ? { ...c, ...patch } : c)));
+  }
+  function removeComp(r, i) {
+    setComps(r.id, (r.components || []).filter((_, idx) => idx !== i));
+  }
   const hasSet = (r) => (r.components || []).some((c) => (c.name || "").trim());
 
   async function addMenu() {
@@ -267,39 +270,44 @@ function MenuManager() {
                   </div>
                 )}
 
-                {/* 세트 구성 — 주방 출고 / 홀 출고 두 칸으로 나눔. 하나라도 채우면 세트메뉴(고정가) */}
+                {/* 세트 구성 — 구성품마다 주방/홀 개별 선택. 하나라도 있으면 세트메뉴(고정가) */}
                 <div style={{ marginBottom: 10, background: "#1F1F21", borderRadius: 10, border: `1px solid ${DARK.line}`, padding: 12 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>
-                    세트 구성 (주방 / 홀 출고)
-                    {(r.components || []).some((c) => (c.name || "").trim()) && <span style={{ color: DARK.gold }}> · 세트메뉴</span>}
+                  <div style={{ display: "flex", alignItems: "center", marginBottom: 4 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700 }}>
+                      세트 구성{hasSet(r) && <span style={{ color: DARK.gold }}> · 세트메뉴</span>}
+                    </div>
+                    <div style={{ flex: 1 }} />
+                    <button onClick={() => addComp(r)} style={{ ...btnGhost, padding: "7px 12px", minHeight: 0, fontSize: 12 }}>+ 구성품</button>
                   </div>
-                  <div style={{ color: DARK.muted, fontSize: 11.5, marginBottom: 10 }}>
-                    주방/홀 칸을 채우면 세트메뉴가 됩니다(가격은 세트 1개 기준). 주문 시 주방·홀로 각각 출고됩니다. 단품이면 비워두세요.
-                  </div>
-                  {[
-                    { st: "kitchen", label: "주방 출고", color: DARK.gold, ph: "예: 낙지" },
-                    { st: "hall", label: "홀 출고", color: "#6FA8DC", ph: "예: 꼬막" },
-                  ].map((s) => {
-                    const c = stationComp(r, s.st);
-                    return (
-                      <div key={s.st} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                        <div style={{ width: 62, fontSize: 12.5, fontWeight: 700, color: s.color }}>{s.label}</div>
-                        <input
-                          placeholder={s.ph}
-                          value={c.name || ""}
-                          onChange={(e) => editStation(r, s.st, { name: e.target.value })}
-                          style={{ ...field, flex: 1, padding: "9px 10px", fontSize: 13 }}
-                        />
-                        <input
-                          inputMode="numeric"
-                          value={c.qty ?? 1}
-                          onChange={(e) => editStation(r, s.st, { qty: e.target.value.replace(/[^0-9]/g, "") })}
-                          style={{ ...field, width: 44, padding: "9px 6px", fontSize: 13, textAlign: "center" }}
-                        />
-                        <span style={{ color: DARK.muted, fontSize: 12 }}>인</span>
-                      </div>
-                    );
-                  })}
+                  {!hasSet(r) && (r.components || []).length === 0 && (
+                    <div style={{ color: DARK.muted, fontSize: 11.5, marginBottom: 4 }}>
+                      구성품을 추가하면 세트메뉴가 됩니다(가격은 세트 1개 기준). 구성품마다 주방/홀을 선택하면 주문 시 각각 출고됩니다. 단품이면 비워두세요.
+                    </div>
+                  )}
+                  {(r.components || []).map((c, i) => (
+                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6 }}>
+                      <input
+                        placeholder={`구성품 ${i + 1}`}
+                        value={c.name || ""}
+                        onChange={(e) => editComp(r, i, { name: e.target.value })}
+                        style={{ ...field, flex: 1, padding: "9px 10px", fontSize: 13 }}
+                      />
+                      <input
+                        inputMode="numeric"
+                        value={c.qty ?? 1}
+                        onChange={(e) => editComp(r, i, { qty: e.target.value.replace(/[^0-9]/g, "") })}
+                        style={{ ...field, width: 42, padding: "9px 4px", fontSize: 13, textAlign: "center" }}
+                      />
+                      <span style={{ color: DARK.muted, fontSize: 12 }}>인</span>
+                      <button
+                        onClick={() => editComp(r, i, { station: c.station === "hall" ? "kitchen" : "hall" })}
+                        style={{ width: 54, padding: "9px 0", borderRadius: 8, fontSize: 12, fontWeight: 700, border: `1px solid ${c.station === "hall" ? "#6FA8DC" : DARK.gold}`, background: "transparent", color: c.station === "hall" ? "#6FA8DC" : DARK.gold }}
+                      >
+                        {c.station === "hall" ? "홀" : "주방"}
+                      </button>
+                      <button onClick={() => removeComp(r, i)} style={{ padding: "9px 6px", background: "transparent", color: "#E88", fontWeight: 700, fontSize: 13 }}>✕</button>
+                    </div>
+                  ))}
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                   <button
