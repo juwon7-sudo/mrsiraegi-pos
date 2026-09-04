@@ -296,12 +296,12 @@ function MenuManager() {
 
                 {/* 세트 구성 — 구성품마다 주방/홀 개별 선택. 하나라도 있으면 세트메뉴(고정가) */}
                 <div style={{ marginBottom: 10, background: "#1F1F21", borderRadius: 10, border: `1px solid ${DARK.line}`, padding: 12 }}>
-                  <div style={{ display: "flex", alignItems: "center", marginBottom: 4 }}>
-                    <div style={{ fontSize: 13, fontWeight: 700 }}>
-                      세트 구성{hasSet(r) && <span style={{ color: DARK.gold }}> · 세트메뉴</span>}
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, whiteSpace: "nowrap" }}>
+                      세트 구성{hasSet(r) && <span style={{ color: DARK.gold }}> · 세트</span>}
                     </div>
                     <div style={{ flex: 1 }} />
-                    <button onClick={() => addComp(r)} style={{ ...btnGhost, padding: "7px 12px", minHeight: 0, fontSize: 12 }}>+ 구성품</button>
+                    <button onClick={() => addComp(r)} style={{ ...btnGhost, padding: "7px 12px", minHeight: 0, fontSize: 12, whiteSpace: "nowrap" }}>+ 구성품</button>
                   </div>
                   {!hasSet(r) && (r.components || []).length === 0 && (
                     <div style={{ color: DARK.muted, fontSize: 11.5, marginBottom: 4 }}>
@@ -309,28 +309,33 @@ function MenuManager() {
                     </div>
                   )}
                   {(r.components || []).map((c, i) => (
-                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6 }}>
+                    <div key={i} style={{ marginTop: 8, background: "#191919", borderRadius: 10, border: `1px solid ${DARK.line}`, padding: 8 }}>
+                      {/* 이름: 한 줄 전체 */}
                       <LocalText
-                        placeholder={`구성품 ${i + 1}`}
+                        placeholder={`구성품 ${i + 1} 이름 (예: 낙지)`}
                         value={c.name || ""}
                         onChangeText={(t) => editComp(r, i, { name: t })}
-                        style={{ ...field, flex: 1, padding: "9px 10px", fontSize: 13 }}
+                        style={{ ...field, width: "100%", padding: "10px 12px", fontSize: 14, marginBottom: 8 }}
                       />
-                      <LocalText
-                        inputMode="numeric"
-                        value={String(c.qty ?? 1)}
-                        filter={digits}
-                        onChangeText={(t) => editComp(r, i, { qty: t })}
-                        style={{ ...field, width: 42, padding: "9px 4px", fontSize: 13, textAlign: "center" }}
-                      />
-                      <span style={{ color: DARK.muted, fontSize: 12 }}>인</span>
-                      <button
-                        onClick={() => editComp(r, i, { station: c.station === "hall" ? "kitchen" : "hall" })}
-                        style={{ width: 54, padding: "9px 0", borderRadius: 8, fontSize: 12, fontWeight: 700, border: `1px solid ${c.station === "hall" ? "#6FA8DC" : DARK.gold}`, background: "transparent", color: c.station === "hall" ? "#6FA8DC" : DARK.gold }}
-                      >
-                        {c.station === "hall" ? "홀" : "주방"}
-                      </button>
-                      <button onClick={() => removeComp(r, i)} style={{ padding: "9px 6px", background: "transparent", color: "#E88", fontWeight: 700, fontSize: 13 }}>✕</button>
+                      {/* 인분 · 출고 · 삭제: 아래 줄 */}
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <LocalText
+                          inputMode="numeric"
+                          value={String(c.qty ?? 1)}
+                          filter={digits}
+                          onChangeText={(t) => editComp(r, i, { qty: t })}
+                          style={{ ...field, width: 56, padding: "9px 6px", fontSize: 14, textAlign: "center" }}
+                        />
+                        <span style={{ color: DARK.muted, fontSize: 13 }}>인</span>
+                        <button
+                          onClick={() => editComp(r, i, { station: c.station === "hall" ? "kitchen" : "hall" })}
+                          style={{ padding: "9px 16px", borderRadius: 8, fontSize: 13, fontWeight: 700, border: `1px solid ${c.station === "hall" ? "#6FA8DC" : DARK.gold}`, background: "transparent", color: c.station === "hall" ? "#6FA8DC" : DARK.gold }}
+                        >
+                          {c.station === "hall" ? "홀 출고" : "주방 출고"}
+                        </button>
+                        <div style={{ flex: 1 }} />
+                        <button onClick={() => removeComp(r, i)} style={{ padding: "9px 10px", background: "transparent", color: "#E88", fontWeight: 700, fontSize: 14 }}>✕ 삭제</button>
+                      </div>
                     </div>
                   ))}
                 </div>
