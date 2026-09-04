@@ -14,6 +14,10 @@ create policy pos_menu_delete on public.pos_menu_items for delete to anon, authe
 
 grant insert, delete on public.pos_menu_items to anon, authenticated;
 
+-- 출고 구분: kitchen(주방에서 조리해 출고) | hall(미리 준비돼 홀에서 바로 출고)
+alter table public.pos_menu_items  add column if not exists station text not null default 'kitchen';
+alter table public.pos_order_items add column if not exists station text not null default 'kitchen';
+
 -- ---------- 2) 메뉴 사진 Storage 버킷 (공개 읽기) ----------
 insert into storage.buckets (id, name, public)
 values ('pos-menu', 'pos-menu', true)

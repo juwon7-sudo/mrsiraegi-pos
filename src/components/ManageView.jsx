@@ -93,16 +93,15 @@ function MenuManager() {
   }
 
   async function addMenu() {
+    setErr("");
     try {
       const sb = getSupabase();
       const sort = (rows.reduce((m, r) => Math.max(m, r.sort || 0), 0) || 0) + 1;
-      const { data, error } = await sb
+      const { error } = await sb
         .from("pos_menu_items")
-        .insert({ name: "새 메뉴", description: "", price: 0, min_people: 1, sort, active: true })
-        .select()
-        .single();
+        .insert({ name: "새 메뉴", description: "", price: 0, min_people: 1, sort, active: true, station: "kitchen" });
       if (error) throw error;
-      setRows((prev) => [...prev, data]);
+      await load(); // 목록 새로고침(여러 개 등록 확실히 반영)
     } catch (e) {
       setErr("메뉴 추가에 실패했습니다.");
     }
@@ -121,6 +120,7 @@ function MenuManager() {
           price: Number(r.price) || 0,
           min_people: Math.max(1, Number(r.min_people) || 1),
           active: !!r.active,
+          station: r.station === "hall" ? "hall" : "kitchen",
         })
         .eq("id", r.id);
       if (error) throw error;
@@ -218,6 +218,35 @@ function MenuManager() {
                     <input style={field} inputMode="numeric" value={r.min_people ?? 1} onChange={(e) => edit(r.id, { min_people: e.target.value.replace(/[^0-9]/g, "") })} />
                   </div>
                 </div>
+                <div style={{ marginBottom: 10 }}>
+                  <div style={label}>출고 구분</div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    {[
+                      { k: "kitchen", label: "주방 출고", desc: "조리 후" },
+                      { k: "hall", label: "홀 출고", desc: "바로" },
+                    ].map((s) => {
+                      const on = (r.station || "kitchen") === s.k;
+                      return (
+                        <button
+                          key={s.k}
+                          onClick={() => edit(r.id, { station: s.k })}
+                          style={{
+                            flex: 1,
+                            padding: "10px 0",
+                            borderRadius: 10,
+                            fontWeight: 700,
+                            fontSize: 13,
+                            background: on ? DARK.elevated : "transparent",
+                            color: on ? DARK.gold : DARK.muted,
+                            border: `1px solid ${on ? DARK.gold : DARK.line}`,
+                          }}
+                        >
+                          {s.label} <span style={{ color: DARK.muted, fontWeight: 500 }}>· {s.desc}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                   <button
                     onClick={() => edit(r.id, { active: !r.active })}
@@ -246,6 +275,8 @@ function SalesAnalytics() {
   const [orders, setOrders] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [err, setErr] = useState("");
+  const [openMethod, setOpenMethod] = useState(null); // 결제수단별 펼침
+  const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
     setLoaded(false);
@@ -268,6 +299,22 @@ function SalesAnalytics() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  async function cancelSale(order) {
+    if (!window.confirm(`${order.table_no}번 · ${wonLabel(order.total)} 매출을 취소할까요?\n(테이블 현황으로 되돌아갑니다)`)) return;
+    setBusy(true);
+    setErr("");
+    try {
+      const sb = getSupabase();
+      const { error } = await sb.from("pos_orders").update({ status: "ready", pay_method: null }).eq("id", order.id);
+      if (error) throw error;
+      await load();
+    } catch (e) {
+      setErr("매출 취소에 실패했습니다.");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   const inRange = useMemo(() => {
     return orders.filter((o) => {
@@ -351,12 +398,45 @@ function SalesAnalytics() {
         <Stat title="객단가(1인당)" value={wonLabel(perPerson)} sub={`총 ${won(peopleCount)}인`} />
       </div>
 
-      {/* 결제수단별 */}
+      {/* 결제수단별 (누르면 개별 건 펼침 → 매출취소) */}
       <div style={card}>
         <div style={{ fontWeight: 700, marginBottom: 6 }}>결제수단별</div>
-        {byMethod.map((p) => (
-          <Row key={p.k} left={p.label} mid={`${p.count}건`} right={wonLabel(p.amount)} />
-        ))}
+        <div style={{ color: DARK.muted, fontSize: 12, marginBottom: 4 }}>결제수단을 누르면 개별 건에서 매출취소</div>
+        {byMethod.map((p) => {
+          const open = openMethod === p.k;
+          const list = inRange.filter((o) => o.pay_method === p.k);
+          return (
+            <div key={p.k} style={{ borderTop: `1px solid ${DARK.line}` }}>
+              <button
+                onClick={() => setOpenMethod(open ? null : p.k)}
+                style={{ width: "100%", display: "flex", alignItems: "center", padding: "12px 0", background: "transparent", color: DARK.ink, textAlign: "left" }}
+              >
+                <div style={{ flex: 1, fontSize: 14, fontWeight: 700 }}>
+                  {open ? "▾ " : "▸ "}{p.label}
+                </div>
+                <div style={{ color: DARK.muted, fontSize: 13, marginRight: 12 }}>{p.count}건</div>
+                <div style={{ fontWeight: 700, fontSize: 14 }}>{wonLabel(p.amount)}</div>
+              </button>
+              {open && (
+                <div style={{ padding: "0 0 8px" }}>
+                  {list.length === 0 && <div style={{ color: DARK.muted, fontSize: 13, padding: "4px 0 10px" }}>해당 건이 없습니다</div>}
+                  {list.map((o) => (
+                    <div key={o.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 0 9px 12px", borderTop: `1px solid ${DARK.line}` }}>
+                      <div style={{ color: DARK.gold, fontWeight: 700, width: 40, fontSize: 13 }}>{o.table_no}번</div>
+                      <div style={{ flex: 1, fontSize: 13 }}>
+                        {wonLabel(o.total)}
+                        <span style={{ color: DARK.muted }}> · {seoulDate(o.created_at)}</span>
+                      </div>
+                      <button onClick={() => cancelSale(o)} disabled={busy} style={{ background: "transparent", color: "#E88", fontWeight: 700, fontSize: 12.5, padding: "7px 12px", borderRadius: 10, border: `1px solid ${DARK.line}`, opacity: busy ? 0.5 : 1 }}>
+                        매출취소
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
         {noneAmount > 0 && <Row left="미지정" mid="" right={wonLabel(noneAmount)} muted />}
       </div>
 

@@ -23,9 +23,9 @@ export default function KitchenView() {
         .neq("status", "done")
         .order("created_at", { ascending: true });
       if (error) throw error;
-      // 미출고 항목이 하나라도 있는 주문만
+      // 주방 출고(station=kitchen) 항목 중 미출고가 남은 주문만 (홀 출고는 주방에 안 뜸)
       const list = (data || []).filter((o) =>
-        (o.pos_order_items || []).some((it) => !it.dispatched)
+        (o.pos_order_items || []).some((it) => it.station !== "hall" && !it.dispatched)
       );
       setOrders(list);
       setErr("");
@@ -85,7 +85,8 @@ export default function KitchenView() {
         )}
 
         {orders.map((o) => {
-          const items = o.pos_order_items || [];
+          // 주방 출고 항목만 표시 (홀 출고는 주방에 안 뜸)
+          const items = (o.pos_order_items || []).filter((it) => it.station !== "hall");
           const done = items.filter((it) => it.dispatched).length;
           const rep = items[0]?.name || "주문";
           return (

@@ -105,17 +105,26 @@ export default function OrderView() {
         .single();
       if (oErr) throw oErr;
 
-      const rows = selected.map((m) => ({
-        order_id: order.id,
-        menu_id: m.id,
-        name: m.name,
-        people: qty[m.id],
-        amount: m.price * qty[m.id],
-        dispatched: false,
-        taken: false,
-      }));
+      const rows = selected.map((m) => {
+        const hall = m.station === "hall"; // 홀 출고 = 주방 조리 없이 바로 출고
+        return {
+          order_id: order.id,
+          menu_id: m.id,
+          name: m.name,
+          people: qty[m.id],
+          amount: m.price * qty[m.id],
+          station: hall ? "hall" : "kitchen",
+          dispatched: hall, // 홀 출고는 주방 출고 단계를 건너뛰고 바로 '나갈 음식'으로
+          taken: false,
+        };
+      });
       const { error: iErr } = await sb.from("pos_order_items").insert(rows);
       if (iErr) throw iErr;
+
+      // 모든 항목이 홀 출고면 주방 대기 없이 바로 준비 상태로
+      if (rows.every((r) => r.dispatched)) {
+        await sb.from("pos_orders").update({ status: "ready" }).eq("id", order.id);
+      }
 
       setLastItems(rows);
       setQty({});
