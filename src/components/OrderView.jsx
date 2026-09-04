@@ -50,9 +50,11 @@ export default function OrderView() {
 
   const canProceed = people != null;
 
-  // 인원 수에 맞는 메뉴만 (1명 → 1인 메뉴, 2명+ → 2인 이상 한상)
+  // 1명 → 1인 메뉴(min_people 1)만, 2명+ → 한상(min_people 2 이상)만.
+  // 두 그룹을 완전히 분리해 서로의 화면에 섞이지 않게 한다.
   function menuForPeople(n) {
-    return menu.filter((m) => (m.min_people || 1) <= (n || 1));
+    if ((n || 1) <= 1) return menu.filter((m) => (m.min_people || 1) <= 1);
+    return menu.filter((m) => (m.min_people || 1) >= 2);
   }
 
   function goMenu() {
@@ -81,9 +83,10 @@ export default function OrderView() {
     });
   }
 
+  // 현재 인원 화면에 보이는 메뉴 중 담긴 것만 (다른 인원대의 잔여 선택은 무시)
   const selected = useMemo(
-    () => menu.filter((m) => qty[m.id] != null),
-    [menu, qty]
+    () => menuForPeople(people).filter((m) => qty[m.id] != null),
+    [menu, qty, people]
   );
   const totalCount = selected.length;
   const totalPeople = selected.reduce((s, m) => s + (qty[m.id] || 0), 0);
