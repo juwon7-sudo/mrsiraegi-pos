@@ -4,11 +4,12 @@ import TopTabs from "@/components/TopTabs";
 import OrderView from "@/components/OrderView";
 import KitchenView from "@/components/KitchenView";
 import CounterView from "@/components/CounterView";
+import ManageView from "@/components/ManageView";
 import { TABBAR_BG } from "@/lib/constants";
 
 export default function Home() {
   const [tab, setTab] = useState("order");
-  const wide = tab === "counter"; // 카운터는 가로(와이드) 레이아웃
+  const wide = tab === "counter" || tab === "manage"; // 카운터·관리는 가로(와이드) 레이아웃
 
   return (
     <div
@@ -29,6 +30,7 @@ export default function Home() {
           {tab === "order" && <OrderView />}
           {tab === "kitchen" && <KitchenView />}
           {tab === "counter" && <CounterView />}
+          {tab === "manage" && <ManageView />}
         </div>
       </div>
     </div>

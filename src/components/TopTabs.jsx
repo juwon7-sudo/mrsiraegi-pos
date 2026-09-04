@@ -5,6 +5,7 @@ const TABS = [
   { key: "order", label: "주문" },
   { key: "kitchen", label: "주방" },
   { key: "counter", label: "카운터" },
+  { key: "manage", label: "관리" },
 ];
 
 export default function TopTabs({ active, onChange }) {

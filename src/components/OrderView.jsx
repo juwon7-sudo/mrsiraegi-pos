@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
-import { getSupabase } from "@/lib/supabaseClient";
+import { getSupabase, menuImageUrl } from "@/lib/supabaseClient";
 import { ORDER, font, serif, TABLES, PARTY_OPTIONS } from "@/lib/constants";
 import { wonLabel } from "@/lib/format";
 
@@ -530,12 +530,21 @@ export default function OrderView() {
                   overflow: "hidden",
                 }}
               >
-                {/* 사진 자리 (실제 파일 없음 → 브랜드 톤 플레이스홀더) */}
+                {/* 사진: image_path 있으면 실제 사진, 없으면 브랜드 톤 플레이스홀더 */}
                 <div style={photoPlaceholder}>
+                  {menuImageUrl(m.image_path) && (
+                    <img
+                      src={menuImageUrl(m.image_path)}
+                      alt={m.name}
+                      style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
+                    />
+                  )}
                   {added && <div style={addedBadge}>{cnt}인 담김</div>}
-                  <div style={{ fontFamily: serif, fontWeight: 700, fontSize: 22, color: "#FFF9EC" }}>
-                    {m.name}
-                  </div>
+                  {!menuImageUrl(m.image_path) && (
+                    <div style={{ fontFamily: serif, fontWeight: 700, fontSize: 22, color: "#FFF9EC" }}>
+                      {m.name}
+                    </div>
+                  )}
                 </div>
 
                 <div style={{ padding: 14 }}>

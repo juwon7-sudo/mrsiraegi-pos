@@ -41,6 +41,18 @@ export function seoulToday() {
   return fmt.format(new Date()); // en-CA => YYYY-MM-DD
 }
 
+// 주어진 ISO 시각을 Asia/Seoul 기준 "YYYY-MM-DD" 로
+export function seoulDate(iso) {
+  if (!iso) return "";
+  const fmt = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  return fmt.format(new Date(iso));
+}
+
 // 주어진 ISO 시각이 Asia/Seoul 기준 오늘인지
 export function isSeoulToday(iso) {
   if (!iso) return false;

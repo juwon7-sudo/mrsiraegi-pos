@@ -16,3 +16,11 @@ export function getSupabase() {
   });
   return _client;
 }
+
+// 메뉴 사진 공개 URL (pos-menu 공개 버킷)
+export function menuImageUrl(path) {
+  if (!path) return null;
+  if (/^https?:\/\//.test(path)) return path; // 이미 전체 URL이면 그대로
+  const base = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+  return `${base}/storage/v1/object/public/pos-menu/${path}`;
+}
