@@ -400,7 +400,6 @@ export default function CounterView() {
                   <div key={it.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 0", borderTop: `1px solid ${DARK.line}`, fontSize: 14 }}>
                     <div style={{ flex: 1 }}>
                       {it.name} <span style={{ color: DARK.muted }}>{it.people}인</span>
-                      <span style={{ color: DARK.muted }}> · {wonLabel(it.amount)}</span>
                     </div>
                     {it.taken ? (
                       <div style={{ color: DARK.green, fontWeight: 700, fontSize: 13 }}>제공완료</div>
