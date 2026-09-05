@@ -17,7 +17,8 @@ const SERVE_BLUE = "#6FA8DC"; // 서빙대기(주방 출고 완료, 홀 전달 �
 export default function CounterView() {
   const [seg, setSeg] = useState("tables"); // tables | sales
   const [active, setActive] = useState([]); // status != done + items
-  const [doneToday, setDoneToday] = useState([]); // 오늘 완료 주문
+  const [doneToday, setDoneToday] = useState([]); // 오늘 완료 주문(무효 제외)
+  const [voidedToday, setVoidedToday] = useState([]); // 오늘 취소(무효) 내역
   const [err, setErr] = useState("");
   const [loaded, setLoaded] = useState(false);
   const [sheetTable, setSheetTable] = useState(null); // 결제/정리 대상 order
@@ -36,7 +37,9 @@ export default function CounterView() {
       if (a.error) throw a.error;
       if (d.error) throw d.error;
       setActive(a.data || []);
-      setDoneToday((d.data || []).filter((o) => isSeoulToday(o.created_at) && !o.voided));
+      const doneT = (d.data || []).filter((o) => isSeoulToday(o.created_at));
+      setDoneToday(doneT.filter((o) => !o.voided));
+      setVoidedToday(doneT.filter((o) => o.voided));
       setErr("");
     } catch (e) {
       setErr("카운터 정보를 불러오지 못했습니다.");
@@ -98,14 +101,14 @@ export default function CounterView() {
     }
   }
 
-  // 매출 취소: 결제 완료(done)를 되돌려 테이블 현황(제공완료)으로 복귀
+  // 매출 취소: 무효(감사) 처리. 테이블로 복원하지 않고 매출에서만 제외, 취소 내역에 보존.
   async function cancelSale(order) {
-    if (!window.confirm(`${order.table_no}번 테이블 매출을 취소할까요?\n(테이블 현황으로 되돌아가 다시 결제할 수 있습니다)`)) return;
+    if (!window.confirm(`${order.table_no}번 · ${wonLabel(order.total)} 매출을 취소할까요?\n테이블로 복원되지 않으며, 취소 내역에만 남습니다.`)) return;
     try {
       const sb = getSupabase();
       const { error } = await sb
         .from("pos_orders")
-        .update({ status: "ready", pay_method: null })
+        .update({ voided: true, voided_at: new Date().toISOString() })
         .eq("id", order.id);
       if (error) throw error;
       await load();
@@ -337,6 +340,27 @@ export default function CounterView() {
             {loaded && doneToday.length === 0 && (
               <div style={{ color: DARK.muted, textAlign: "center", marginTop: 20, fontSize: 13 }}>
                 오늘 완료된 주문이 아직 없습니다
+              </div>
+            )}
+
+            {/* 오늘 취소(무효) 내역 — 매출 제외, 기록만 보관 */}
+            {voidedToday.length > 0 && (
+              <div style={{ background: DARK.card, borderRadius: 16, padding: "6px 16px 10px", marginTop: 12, border: `1px solid #5a3a3a` }}>
+                <div style={{ color: "#E88", fontSize: 12, fontWeight: 700, padding: "10px 0 4px" }}>
+                  오늘 취소 내역 {voidedToday.length}건 · {wonLabel(voidedToday.reduce((s, o) => s + (o.total || 0), 0))} (매출 제외)
+                </div>
+                {voidedToday.map((o, i) => (
+                  <div key={o.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 0", borderTop: i === 0 ? "none" : `1px solid ${DARK.line}` }}>
+                    <div style={{ color: DARK.gold, fontWeight: 700, width: 38, fontSize: 13 }}>{o.table_no}번</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13 }}>
+                        <span style={{ textDecoration: "line-through", color: DARK.muted }}>{wonLabel(o.total)}</span>
+                        <span style={{ color: DARK.muted }}> · {payLabel(o.pay_method)}</span>
+                      </div>
+                    </div>
+                    <div style={{ color: DARK.muted, fontSize: 12 }}>취소됨</div>
+                  </div>
+                ))}
               </div>
             )}
           </div>
