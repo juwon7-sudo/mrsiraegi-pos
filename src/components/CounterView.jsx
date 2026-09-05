@@ -182,29 +182,34 @@ export default function CounterView() {
               <div style={{ fontWeight: 700, fontSize: 15, marginBottom: readyItems.length ? 10 : 0 }}>
                 <span style={{ color: DARK.green }}>●</span> 나갈 음식 {readyItems.length}건 대기
               </div>
-              {readyItems.map((it, i) => (
-                <div
-                  key={it.id}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
-                    padding: "9px 0",
-                    borderTop: i === 0 ? "none" : `1px solid ${DARK.line}`,
-                  }}
-                >
-                  <div style={{ color: DARK.gold, fontWeight: 700, width: 34 }}>{it.table_no}번</div>
-                  <div style={{ flex: 1, fontSize: 15 }}>
-                    {it.name} <span style={{ color: DARK.muted }}>{it.people}인</span>
-                  </div>
-                  <button
-                    onClick={() => takeItem(it)}
-                    style={{ background: DARK.green, color: "#0E2A16", fontWeight: 700, fontSize: 13, padding: "9px 14px", borderRadius: 10, minHeight: 40 }}
+              {/* 여러 칸으로 나눠 한 번에 더 많이 표시(가로로 길지 않게) */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 8 }}>
+                {readyItems.map((it) => (
+                  <div
+                    key={it.id}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      padding: "9px 12px",
+                      background: "#232325",
+                      borderRadius: 12,
+                      border: `1px solid ${DARK.line}`,
+                    }}
                   >
-                    가져감
-                  </button>
-                </div>
-              ))}
+                    <div style={{ color: DARK.gold, fontWeight: 700, width: 34, flexShrink: 0 }}>{it.table_no}번</div>
+                    <div style={{ flex: 1, minWidth: 0, fontSize: 15, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {it.name} <span style={{ color: DARK.muted }}>{it.people}인</span>
+                    </div>
+                    <button
+                      onClick={() => takeItem(it)}
+                      style={{ background: DARK.green, color: "#0E2A16", fontWeight: 700, fontSize: 13, padding: "9px 14px", borderRadius: 10, minHeight: 40, flexShrink: 0 }}
+                    >
+                      가져감
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
 
             {/* 테이블 그리드 — 화면 폭에 맞춰 여러 열 (가로 태블릿 대응) */}
