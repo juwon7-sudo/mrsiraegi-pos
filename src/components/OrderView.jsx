@@ -465,7 +465,6 @@ export default function OrderView() {
                       <div style={{ fontWeight: 700, fontSize: 14.5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {it.name}
                       </div>
-                      <div style={{ color: ORDER.red, fontWeight: 700, fontSize: 13 }}>{wonLabel(it.amount)}</div>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       <button
