@@ -251,7 +251,7 @@ export default function CounterView() {
                     : state === "serving"
                     ? "rgba(111,168,220,.20)"
                     : "rgba(227,178,62,.18)";
-                const rep = items[0]?.name || "주문";
+                const rep = items[0]?.menu_name || items[0]?.name || "주문";
                 const total = os.reduce((s, o) => s + (o.total || 0), 0);
                 const people = Math.max(...os.map((o) => o.people || 0));
                 const created = os[0]?.created_at; // 활성은 오래된 순 → 첫 주문 기준 경과

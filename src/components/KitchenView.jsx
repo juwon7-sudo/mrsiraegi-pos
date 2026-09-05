@@ -88,7 +88,7 @@ export default function KitchenView() {
           // 주방 출고 항목만 표시 (홀 출고는 주방에 안 뜸)
           const items = (o.pos_order_items || []).filter((it) => it.station !== "hall");
           const done = items.filter((it) => it.dispatched).length;
-          const rep = items[0]?.name || "";
+          const rep = items[0]?.menu_name || items[0]?.name || "";
           return (
             <div
               key={o.id}

@@ -26,6 +26,9 @@ alter table public.pos_orders add column if not exists voided_at timestamptz;
 -- 값이 있으면 세트(고정가)로 취급하고, 주문 시 구성품마다 별도 출고 건으로 나뉜다.
 alter table public.pos_menu_items add column if not exists components jsonb not null default '[]'::jsonb;
 
+-- 주문 항목에 원래 메뉴 이름 저장(주방/카운터에 기본 메뉴명 표시용)
+alter table public.pos_order_items add column if not exists menu_name text;
+
 -- ---------- 2) 메뉴 사진 Storage 버킷 (공개 읽기) ----------
 insert into storage.buckets (id, name, public)
 values ('pos-menu', 'pos-menu', true)
