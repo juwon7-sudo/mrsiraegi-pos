@@ -23,7 +23,7 @@ export default function OrderView() {
   // 주문 수정/삭제(관리)
   const [manageOrders, setManageOrders] = useState([]);
   const [manageLoading, setManageLoading] = useState(false);
-  const [manageBusy, setManageBusy] = useState(false);
+  const [manageBusyId, setManageBusyId] = useState(null); // 처리 중인 주문 id
   const [confirm, confirmModal] = useConfirm();
 
   useEffect(() => {
@@ -226,8 +226,8 @@ export default function OrderView() {
   }
 
   async function saveOrder(order) {
-    if (manageBusy) return;
-    setManageBusy(true);
+    if (manageBusyId) return;
+    setManageBusyId(order.id);
     setErr("");
     try {
       const sb = getSupabase();
@@ -245,14 +245,14 @@ export default function OrderView() {
     } catch (e) {
       setErr("수정 저장에 실패했습니다.");
     } finally {
-      setManageBusy(false);
+      setManageBusyId(null);
     }
   }
 
   async function deleteItem(order, item) {
-    if (manageBusy) return;
+    if (manageBusyId) return;
     if (!(await confirm(`${item.name} 항목을 삭제할까요?`))) return;
-    setManageBusy(true);
+    setManageBusyId(order.id);
     setErr("");
     try {
       const sb = getSupabase();
@@ -269,14 +269,14 @@ export default function OrderView() {
     } catch (e) {
       setErr("항목 삭제에 실패했습니다.");
     } finally {
-      setManageBusy(false);
+      setManageBusyId(null);
     }
   }
 
   async function deleteOrder(order) {
-    if (manageBusy) return;
+    if (manageBusyId) return;
     if (!(await confirm(`${tableLabel(order.table_no)} 주문 전체를 삭제할까요?`))) return;
-    setManageBusy(true);
+    setManageBusyId(order.id);
     setErr("");
     try {
       const sb = getSupabase();
@@ -286,7 +286,7 @@ export default function OrderView() {
     } catch (e) {
       setErr("주문 삭제에 실패했습니다.");
     } finally {
-      setManageBusy(false);
+      setManageBusyId(null);
     }
   }
 
@@ -501,7 +501,7 @@ export default function OrderView() {
                   </div>
                   <button
                     onClick={() => saveOrder(o)}
-                    disabled={manageBusy}
+                    disabled={manageBusyId === o.id}
                     style={{
                       padding: "11px 20px",
                       borderRadius: 12,
@@ -509,10 +509,10 @@ export default function OrderView() {
                       color: "#FFF",
                       fontWeight: 700,
                       fontSize: 14,
-                      opacity: manageBusy ? 0.5 : 1,
+                      opacity: manageBusyId === o.id ? 0.5 : 1,
                     }}
                   >
-                    변경 저장
+                    {manageBusyId === o.id ? "저장 중…" : "변경 저장"}
                   </button>
                 </div>
               </div>
