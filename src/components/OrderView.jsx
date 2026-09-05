@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { getSupabase, menuImageUrl } from "@/lib/supabaseClient";
+import { useConfirm } from "@/components/confirm";
 import { ORDER, font, serif, TABLES, PARTY_OPTIONS } from "@/lib/constants";
 import { wonLabel } from "@/lib/format";
 
@@ -23,6 +24,7 @@ export default function OrderView() {
   const [manageOrders, setManageOrders] = useState([]);
   const [manageLoading, setManageLoading] = useState(false);
   const [manageBusy, setManageBusy] = useState(false);
+  const [confirm, confirmModal] = useConfirm();
 
   useEffect(() => {
     let alive = true;
@@ -247,7 +249,7 @@ export default function OrderView() {
 
   async function deleteItem(order, item) {
     if (manageBusy) return;
-    if (!window.confirm(`${item.name} 항목을 삭제할까요?`)) return;
+    if (!(await confirm(`${item.name} 항목을 삭제할까요?`))) return;
     setManageBusy(true);
     setErr("");
     try {
@@ -271,7 +273,7 @@ export default function OrderView() {
 
   async function deleteOrder(order) {
     if (manageBusy) return;
-    if (!window.confirm(`${order.table_no}번 테이블 주문 전체를 삭제할까요?`)) return;
+    if (!(await confirm(`${order.table_no}번 테이블 주문 전체를 삭제할까요?`))) return;
     setManageBusy(true);
     setErr("");
     try {
@@ -523,6 +525,7 @@ export default function OrderView() {
             추가 주문
           </button>
         </BottomBar>
+        {confirmModal}
       </div>
     );
   }

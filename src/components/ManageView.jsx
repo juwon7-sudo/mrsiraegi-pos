@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useMemo, useState } from "react";
 import { getSupabase, menuImageUrl } from "@/lib/supabaseClient";
 import { DARK, font, serif } from "@/lib/constants";
 import { wonLabel, won, seoulToday, seoulDate } from "@/lib/format";
+import { useConfirm } from "@/components/confirm";
 
 const PAY_METHODS = [
   { k: "card", label: "카드" },
@@ -95,6 +96,7 @@ function MenuManager() {
   const [loaded, setLoaded] = useState(false);
   const [err, setErr] = useState("");
   const [busyId, setBusyId] = useState(null);
+  const [confirm, confirmModal] = useConfirm();
 
   const load = useCallback(async () => {
     try {
@@ -179,7 +181,7 @@ function MenuManager() {
   }
 
   async function remove(r) {
-    if (!window.confirm(`'${r.name}' 메뉴를 삭제할까요?`)) return;
+    if (!(await confirm(`'${r.name}' 메뉴를 삭제할까요?`))) return;
     setBusyId(r.id);
     try {
       const sb = getSupabase();
@@ -366,6 +368,7 @@ function MenuManager() {
           </div>
         );
       })}
+      {confirmModal}
     </>
   );
 }
@@ -380,6 +383,7 @@ function SalesAnalytics() {
   const [err, setErr] = useState("");
   const [openMethod, setOpenMethod] = useState(null); // 결제수단별 펼침
   const [busy, setBusy] = useState(false);
+  const [confirm, confirmModal] = useConfirm();
 
   const load = useCallback(async () => {
     setLoaded(false);
@@ -405,7 +409,7 @@ function SalesAnalytics() {
 
   // 매출 무효 처리(감사): 테이블로 복원하지 않고 매출에서만 제외, 내역은 보존
   async function voidSale(order) {
-    if (!window.confirm(`${order.table_no}번 · ${wonLabel(order.total)} 매출을 취소(무효) 처리할까요?\n테이블로 복원되지 않으며, 취소 내역에만 남습니다.`)) return;
+    if (!(await confirm(`${order.table_no}번 · ${wonLabel(order.total)} 매출을 취소(무효) 처리할까요?\n테이블로 복원되지 않으며, 취소 내역에만 남습니다.`))) return;
     setBusy(true);
     setErr("");
     try {
@@ -587,6 +591,7 @@ function SalesAnalytics() {
           </div>
         ))}
       </div>
+      {confirmModal}
     </>
   );
 }

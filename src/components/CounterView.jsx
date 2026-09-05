@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { getSupabase } from "@/lib/supabaseClient";
 import { DARK, font, serif, TABLES } from "@/lib/constants";
 import { wonLabel, elapsedLabel, isSeoulToday } from "@/lib/format";
+import { useConfirm } from "@/components/confirm";
 
 const PAY_METHODS = [
   { k: "card", label: "카드" },
@@ -23,6 +24,7 @@ export default function CounterView() {
   const [loaded, setLoaded] = useState(false);
   const [sheetTable, setSheetTable] = useState(null); // 결제/정리 대상 order
   const [, forceTick] = useState(0);
+  const [confirm, confirmModal] = useConfirm();
   const busy = useRef(false);
 
   const load = useCallback(async () => {
@@ -103,7 +105,7 @@ export default function CounterView() {
 
   // 매출 취소: 무효(감사) 처리. 테이블로 복원하지 않고 매출에서만 제외, 취소 내역에 보존.
   async function cancelSale(order) {
-    if (!window.confirm(`${order.table_no}번 · ${wonLabel(order.total)} 매출을 취소할까요?\n테이블로 복원되지 않으며, 취소 내역에만 남습니다.`)) return;
+    if (!(await confirm(`${order.table_no}번 · ${wonLabel(order.total)} 매출을 취소할까요?\n테이블로 복원되지 않으며, 취소 내역에만 남습니다.`))) return;
     try {
       const sb = getSupabase();
       const { error } = await sb
@@ -456,6 +458,7 @@ export default function CounterView() {
             </div>
           );
         })()}
+      {confirmModal}
     </div>
   );
 }
