@@ -113,23 +113,24 @@ export default function OrderView() {
       selected.forEach((m) => {
         const units = qty[m.id]; // 주문 인원
         if (isSet(m)) {
-          // 세트 → 구성품마다 별도 출고 건(인원에 비례). 금액은 인분 비율로 배분(합계=1인가×인원).
+          // 세트 → 구성품마다 별도 출고 건. 1인당 양이 있으면 인원에 맞춰 계산해 이름에 표기.
+          // 금액은 구성품 수로 균등 배분(합계=1인가×인원).
           const comps = m.components || [];
           const lineAmount = m.price * units;
-          const sumQty = comps.reduce((s, c) => s + (Number(c.qty) || 0), 0) || 1;
           let allocated = 0;
           comps.forEach((c, idx) => {
             const hall = c.station === "hall";
-            const cq = (Number(c.qty) || 0) * units; // 구성품 인분 = 구성 인분 × 주문 인원
+            const per = Number(c.amount) || 0;
+            const label = per > 0 ? `${c.name} ${per * units}${c.unit || ""}` : c.name;
             const amt = idx === comps.length - 1
               ? lineAmount - allocated
-              : Math.round((lineAmount * (Number(c.qty) || 0)) / sumQty);
+              : Math.round(lineAmount / comps.length);
             allocated += amt;
             rows.push({
               order_id: order.id,
               menu_id: m.id,
-              name: c.name,
-              people: cq,
+              name: label,
+              people: units,
               amount: amt,
               station: hall ? "hall" : "kitchen",
               dispatched: hall,

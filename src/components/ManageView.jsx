@@ -120,7 +120,7 @@ function MenuManager() {
     edit(id, { components: comps });
   }
   function addComp(r) {
-    setComps(r.id, [...(r.components || []), { name: "", station: "kitchen", qty: 1 }]);
+    setComps(r.id, [...(r.components || []), { name: "", station: "kitchen", amount: "", unit: "g" }]);
   }
   function editComp(r, i, patch) {
     setComps(r.id, (r.components || []).map((c, idx) => (idx === i ? { ...c, ...patch } : c)));
@@ -161,7 +161,12 @@ function MenuManager() {
           station: r.station === "hall" ? "hall" : "kitchen",
           components: (r.components || [])
             .filter((c) => (c.name || "").trim())
-            .map((c) => ({ name: c.name.trim(), station: c.station === "hall" ? "hall" : "kitchen", qty: Math.max(1, Number(c.qty) || 1) })),
+            .map((c) => ({
+              name: c.name.trim(),
+              station: c.station === "hall" ? "hall" : "kitchen",
+              amount: c.amount === "" || c.amount == null ? null : Math.max(0, Number(c.amount) || 0),
+              unit: (c.unit || "").trim(),
+            })),
         })
         .eq("id", r.id);
       if (error) throw error;
@@ -305,7 +310,7 @@ function MenuManager() {
                   </div>
                   {!hasSet(r) && (r.components || []).length === 0 && (
                     <div style={{ color: DARK.muted, fontSize: 11.5, marginBottom: 4 }}>
-                      구성품을 추가하면 세트메뉴가 됩니다. 주문은 다른 메뉴처럼 인원 단위(가격은 1인 기준)이고, 구성품은 인원에 비례해 각 구성품의 주방/홀로 나눠 출고됩니다. 단품이면 비워두세요.
+                      구성품을 추가하면 세트메뉴가 됩니다. 주문은 인원 단위(가격은 1인 기준). 구성품마다 1인당 양·단위를 넣으면 주문 인원에 맞춰 주방표에 양이 자동 계산됩니다(예: 낙지 140 g → 2인 주문 시 280 g). 양이 필요 없으면 비워두세요. 단품이면 구성품을 아예 비워두세요.
                     </div>
                   )}
                   {(r.components || []).map((c, i) => (
@@ -317,16 +322,22 @@ function MenuManager() {
                         onChangeText={(t) => editComp(r, i, { name: t })}
                         style={{ ...field, width: "100%", padding: "10px 12px", fontSize: 14, marginBottom: 8 }}
                       />
-                      {/* 인분 · 출고 · 삭제: 아래 줄 */}
+                      {/* 1인당 양 · 단위 · 출고 · 삭제: 아래 줄 */}
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         <LocalText
                           inputMode="numeric"
-                          value={String(c.qty ?? 1)}
+                          placeholder="1인당"
+                          value={c.amount == null ? "" : String(c.amount)}
                           filter={digits}
-                          onChangeText={(t) => editComp(r, i, { qty: t })}
-                          style={{ ...field, width: 56, padding: "9px 6px", fontSize: 14, textAlign: "center" }}
+                          onChangeText={(t) => editComp(r, i, { amount: t })}
+                          style={{ ...field, width: 64, padding: "9px 6px", fontSize: 14, textAlign: "center" }}
                         />
-                        <span style={{ color: DARK.muted, fontSize: 13 }}>인</span>
+                        <LocalText
+                          placeholder="단위"
+                          value={c.unit ?? ""}
+                          onChangeText={(t) => editComp(r, i, { unit: t })}
+                          style={{ ...field, width: 52, padding: "9px 6px", fontSize: 14, textAlign: "center" }}
+                        />
                         <button
                           onClick={() => editComp(r, i, { station: c.station === "hall" ? "kitchen" : "hall" })}
                           style={{ padding: "9px 16px", borderRadius: 8, fontSize: 13, fontWeight: 700, border: `1px solid ${c.station === "hall" ? "#6FA8DC" : DARK.gold}`, background: "transparent", color: c.station === "hall" ? "#6FA8DC" : DARK.gold }}
