@@ -88,7 +88,6 @@ export default function KitchenView() {
           // 주방 출고 항목만 표시 (홀 출고는 주방에 안 뜸)
           const items = (o.pos_order_items || []).filter((it) => it.station !== "hall");
           const done = items.filter((it) => it.dispatched).length;
-          const rep = items[0]?.name || "주문";
           return (
             <div
               key={o.id}
@@ -104,9 +103,6 @@ export default function KitchenView() {
                 <div style={{ flex: 1 }}>
                   <div style={{ fontFamily: serif, fontWeight: 700, fontSize: 34, color: DARK.gold, lineHeight: 1 }}>
                     {o.table_no}번
-                  </div>
-                  <div style={{ color: DARK.muted, fontSize: 14, marginTop: 6 }}>
-                    {rep} {o.people}인
                   </div>
                 </div>
                 <div style={{ fontFamily: serif, fontWeight: 700, color: DARK.gold, fontSize: 16 }}>
