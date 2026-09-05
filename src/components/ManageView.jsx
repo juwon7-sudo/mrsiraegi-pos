@@ -252,7 +252,7 @@ function MenuManager() {
 
                 <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
                   <div style={{ flex: 1 }}>
-                    <div style={label}>{hasSet(r) ? "세트 가격(원)" : "1인 가격(원)"}</div>
+                    <div style={label}>1인 가격(원)</div>
                     <LocalText style={field} inputMode="numeric" value={String(r.price ?? 0)} filter={digits} onChangeText={(t) => edit(r.id, { price: t })} />
                   </div>
                   <div style={{ width: 96 }}>
@@ -305,7 +305,7 @@ function MenuManager() {
                   </div>
                   {!hasSet(r) && (r.components || []).length === 0 && (
                     <div style={{ color: DARK.muted, fontSize: 11.5, marginBottom: 4 }}>
-                      구성품을 추가하면 세트메뉴가 됩니다(가격은 세트 1개 기준). 구성품마다 주방/홀을 선택하면 주문 시 각각 출고됩니다. 단품이면 비워두세요.
+                      구성품을 추가하면 세트메뉴가 됩니다. 주문은 다른 메뉴처럼 인원 단위(가격은 1인 기준)이고, 구성품은 인원에 비례해 각 구성품의 주방/홀로 나눠 출고됩니다. 단품이면 비워두세요.
                     </div>
                   )}
                   {(r.components || []).map((c, i) => (

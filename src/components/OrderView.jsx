@@ -57,9 +57,9 @@ export default function OrderView() {
     return menu.filter((m) => (m.min_people || 1) >= 2);
   }
 
-  // 세트메뉴(구성품 있음) 여부 · 수량 단위 최소값
+  // 세트메뉴(구성품 있음) 여부. 주문 단위는 세트든 단품이든 인원(人)으로 통일.
   const isSet = (m) => Array.isArray(m.components) && m.components.length > 0;
-  const unitMin = (m) => (isSet(m) ? 1 : m.min_people || 1);
+  const unitMin = (m) => m.min_people || 1;
 
   function goMenu() {
     if (!canProceed) return;
@@ -68,14 +68,14 @@ export default function OrderView() {
     const init = {};
     if (applicable.length === 1) {
       const m = applicable[0];
-      init[m.id] = isSet(m) ? 1 : Math.max(m.min_people || 1, people || 1);
+      init[m.id] = Math.max(m.min_people || 1, people || 1);
     }
     setQty(init);
     setStep("menu");
   }
 
   function addItem(item) {
-    setQty((q) => ({ ...q, [item.id]: isSet(item) ? 1 : Math.max(item.min_people, people || item.min_people) }));
+    setQty((q) => ({ ...q, [item.id]: Math.max(item.min_people, people || item.min_people) }));
   }
   function stepQty(item, delta) {
     setQty((q) => {
@@ -111,19 +111,19 @@ export default function OrderView() {
 
       const rows = [];
       selected.forEach((m) => {
-        const units = qty[m.id]; // 단품=인원, 세트=세트 수
+        const units = qty[m.id]; // 주문 인원
         if (isSet(m)) {
-          // 세트 → 구성품마다 별도 출고 건. 금액은 구성품 인분 비율로 배분(합계=세트가×세트수).
+          // 세트 → 구성품마다 별도 출고 건(인원에 비례). 금액은 인분 비율로 배분(합계=1인가×인원).
           const comps = m.components || [];
-          const setAmount = m.price * units;
+          const lineAmount = m.price * units;
           const sumQty = comps.reduce((s, c) => s + (Number(c.qty) || 0), 0) || 1;
           let allocated = 0;
           comps.forEach((c, idx) => {
             const hall = c.station === "hall";
-            const cq = (Number(c.qty) || 0) * units;
+            const cq = (Number(c.qty) || 0) * units; // 구성품 인분 = 구성 인분 × 주문 인원
             const amt = idx === comps.length - 1
-              ? setAmount - allocated
-              : Math.round((setAmount * (Number(c.qty) || 0)) / sumQty);
+              ? lineAmount - allocated
+              : Math.round((lineAmount * (Number(c.qty) || 0)) / sumQty);
             allocated += amt;
             rows.push({
               order_id: order.id,
@@ -562,13 +562,8 @@ export default function OrderView() {
           )}
 
           {menuForPeople(people).map((m) => {
-            const set = isSet(m);
             const added = qty[m.id] != null;
-            const cnt = qty[m.id] || (set ? 1 : m.min_people);
-            const unit = set ? "세트" : "인";
-            const compSummary = set
-              ? (m.components || []).map((c) => `${c.name} ${c.qty}인`).join(" · ")
-              : "";
+            const cnt = qty[m.id] || m.min_people;
             return (
               <div
                 key={m.id}
@@ -588,7 +583,7 @@ export default function OrderView() {
                       style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
                     />
                   )}
-                  {added && <div style={addedBadge}>{cnt}{unit} 담김</div>}
+                  {added && <div style={addedBadge}>{cnt}인 담김</div>}
                   {!menuImageUrl(m.image_path) && (
                     <div style={{ fontFamily: serif, fontWeight: 700, fontSize: 22, color: "#FFF9EC" }}>
                       {m.name}
@@ -602,36 +597,16 @@ export default function OrderView() {
                     <div style={{ fontFamily: serif, fontWeight: 700, fontSize: 18 }}>{m.name}</div>
                     <div style={{ flex: 1 }} />
                     <div style={{ fontSize: 13.5, whiteSpace: "nowrap" }}>
-                      {set ? (
+                      <span style={{ color: ORDER.muted }}>1인 </span>
+                      <b>{wonLabel(m.price)}</b>
+                      {cnt > 1 && (
                         <>
-                          <span style={{ color: ORDER.muted }}>세트 </span>
-                          <b>{wonLabel(m.price)}</b>
-                          {cnt > 1 && (
-                            <>
-                              <span style={{ color: ORDER.muted }}> / {cnt}세트 </span>
-                              <b style={{ color: ORDER.red }}>{wonLabel(m.price * cnt)}</b>
-                            </>
-                          )}
-                        </>
-                      ) : (
-                        <>
-                          <span style={{ color: ORDER.muted }}>1인 </span>
-                          <b>{wonLabel(m.price)}</b>
-                          {cnt > 1 && (
-                            <>
-                              <span style={{ color: ORDER.muted }}> / {cnt}인 </span>
-                              <b style={{ color: ORDER.red }}>{wonLabel(m.price * cnt)}</b>
-                            </>
-                          )}
+                          <span style={{ color: ORDER.muted }}> / {cnt}인 </span>
+                          <b style={{ color: ORDER.red }}>{wonLabel(m.price * cnt)}</b>
                         </>
                       )}
                     </div>
                   </div>
-                  {set && compSummary && (
-                    <div style={{ color: ORDER.ink, fontSize: 12.5, marginBottom: m.description ? 4 : 12 }}>
-                      <span style={{ color: ORDER.muted }}>구성 · </span>{compSummary}
-                    </div>
-                  )}
                   {m.description && (
                     <div style={{ color: ORDER.muted, fontSize: 12.5, lineHeight: 1.6, marginBottom: 12 }}>
                       {m.description}
@@ -652,7 +627,7 @@ export default function OrderView() {
                         −
                       </button>
                       <div style={{ flex: 1, textAlign: "center", fontWeight: 700, fontSize: 17 }}>
-                        {cnt}{unit}
+                        {cnt}인
                       </div>
                       <button
                         onClick={() => stepQty(m, +1)}
