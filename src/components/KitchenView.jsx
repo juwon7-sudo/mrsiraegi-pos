@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getSupabase } from "@/lib/supabaseClient";
-import { DARK, font, serif } from "@/lib/constants";
+import { DARK, font, serif, tableLabel } from "@/lib/constants";
 import { elapsedLabel } from "@/lib/format";
 
 /* 주방 화면 — 다크. 4초마다 폴링. status != done 이고 미출고 항목이 남은 주문만. */
@@ -88,6 +88,7 @@ export default function KitchenView() {
           // 주방 출고 항목만 표시 (홀 출고는 주방에 안 뜸)
           const items = (o.pos_order_items || []).filter((it) => it.station !== "hall");
           const done = items.filter((it) => it.dispatched).length;
+          const rep = items[0]?.name || "";
           return (
             <div
               key={o.id}
@@ -102,8 +103,13 @@ export default function KitchenView() {
               <div style={{ display: "flex", alignItems: "flex-start", marginBottom: 12 }}>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontFamily: serif, fontWeight: 700, fontSize: 34, color: DARK.gold, lineHeight: 1 }}>
-                    {o.table_no}번
+                    {tableLabel(o.table_no)}
                   </div>
+                  {rep && (
+                    <div style={{ color: DARK.muted, fontSize: 14, marginTop: 6, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {rep}
+                    </div>
+                  )}
                 </div>
                 <div style={{ fontFamily: serif, fontWeight: 700, color: DARK.gold, fontSize: 16 }}>
                   {elapsedLabel(o.created_at)}

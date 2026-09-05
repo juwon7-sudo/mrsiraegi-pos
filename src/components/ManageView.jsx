@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useMemo, useState } from "react";
 import { getSupabase, menuImageUrl } from "@/lib/supabaseClient";
 import { DARK, font, serif } from "@/lib/constants";
 import { wonLabel, won, seoulToday, seoulDate } from "@/lib/format";
+import { tableLabel } from "@/lib/constants";
 import { useConfirm } from "@/components/confirm";
 
 const PAY_METHODS = [
@@ -409,7 +410,7 @@ function SalesAnalytics() {
 
   // 매출 무효 처리(감사): 테이블로 복원하지 않고 매출에서만 제외, 내역은 보존
   async function voidSale(order) {
-    if (!(await confirm(`${order.table_no}번 · ${wonLabel(order.total)} 매출을 취소(무효) 처리할까요?\n테이블로 복원되지 않으며, 취소 내역에만 남습니다.`))) return;
+    if (!(await confirm(`${tableLabel(order.table_no)} · ${wonLabel(order.total)} 매출을 취소(무효) 처리할까요?\n테이블로 복원되지 않으며, 취소 내역에만 남습니다.`))) return;
     setBusy(true);
     setErr("");
     try {
@@ -533,7 +534,7 @@ function SalesAnalytics() {
                   {list.length === 0 && <div style={{ color: DARK.muted, fontSize: 13, padding: "4px 0 10px" }}>해당 건이 없습니다</div>}
                   {list.map((o) => (
                     <div key={o.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 0 9px 12px", borderTop: `1px solid ${DARK.line}` }}>
-                      <div style={{ color: DARK.gold, fontWeight: 700, width: 40, fontSize: 13 }}>{o.table_no}번</div>
+                      <div style={{ color: DARK.gold, fontWeight: 700, width: 48, fontSize: 13 }}>{tableLabel(o.table_no)}</div>
                       <div style={{ flex: 1, fontSize: 13 }}>
                         {wonLabel(o.total)}
                         <span style={{ color: DARK.muted }}> · {seoulDate(o.created_at)}</span>
@@ -580,7 +581,7 @@ function SalesAnalytics() {
         {voidedList.length === 0 && <div style={{ color: DARK.muted, fontSize: 13 }}>취소된 매출이 없습니다</div>}
         {voidedList.map((o) => (
           <div key={o.id} style={{ display: "flex", alignItems: "center", padding: "10px 0", borderTop: `1px solid ${DARK.line}` }}>
-            <div style={{ color: DARK.gold, fontWeight: 700, width: 40, fontSize: 13 }}>{o.table_no}번</div>
+            <div style={{ color: DARK.gold, fontWeight: 700, width: 48, fontSize: 13 }}>{tableLabel(o.table_no)}</div>
             <div style={{ flex: 1, fontSize: 13 }}>
               <span style={{ textDecoration: "line-through", color: DARK.muted }}>{wonLabel(o.total)}</span>
               <span style={{ color: DARK.muted }}> · {o.pay_method ? o.pay_method : "미지정"}</span>

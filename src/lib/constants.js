@@ -32,9 +32,15 @@ export const TAB_INACTIVE = "#9A9A9A";
 export const font = "'Noto Sans KR', sans-serif";
 export const serif = "'Gowun Batang', serif";
 
-// 매장 테이블 수
-export const TABLE_COUNT = 12;
+// 매장 테이블 수 (홀 1~20번) + 포장 2개(21,22 → 포장1,포장2)
+export const TABLE_COUNT = 20;
 export const TABLES = Array.from({ length: TABLE_COUNT }, (_, i) => i + 1);
+export const TAKEOUT_TABLES = [21, 22];
+export const ALL_TABLES = [...TABLES, ...TAKEOUT_TABLES];
+// 표시 라벨: 홀은 "N번", 포장은 "포장N"
+export function tableLabel(n) {
+  return n > TABLE_COUNT ? `포장${n - TABLE_COUNT}` : `${n}번`;
+}
 
 // 인원 선택 옵션 (표시 라벨과 값)
 export const PARTY_OPTIONS = [

@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { getSupabase, menuImageUrl } from "@/lib/supabaseClient";
 import { useConfirm } from "@/components/confirm";
-import { ORDER, font, serif, TABLES, PARTY_OPTIONS } from "@/lib/constants";
+import { ORDER, font, serif, ALL_TABLES, TABLE_COUNT, tableLabel, PARTY_OPTIONS } from "@/lib/constants";
 import { wonLabel } from "@/lib/format";
 
 /* 주문 화면 — 라이트 크림 테마, 다단계 플로우 (테이블/인원 → 메뉴 → 확인) */
@@ -273,7 +273,7 @@ export default function OrderView() {
 
   async function deleteOrder(order) {
     if (manageBusy) return;
-    if (!(await confirm(`${order.table_no}번 테이블 주문 전체를 삭제할까요?`))) return;
+    if (!(await confirm(`${tableLabel(order.table_no)} 주문 전체를 삭제할까요?`))) return;
     setManageBusy(true);
     setErr("");
     try {
@@ -311,9 +311,11 @@ export default function OrderView() {
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 22 }}>
             <div style={{ display: "flex", alignItems: "baseline", gap: 5, whiteSpace: "nowrap" }}>
               <span style={{ fontFamily: serif, fontWeight: 700, fontSize: 24, color: ORDER.red, lineHeight: 1 }}>
-                {tableNo}
+                {tableNo > TABLE_COUNT ? `포장${tableNo - TABLE_COUNT}` : tableNo}
               </span>
-              <span style={{ fontSize: 14, fontWeight: 700, color: ORDER.ink }}>번 테이블</span>
+              <span style={{ fontSize: 14, fontWeight: 700, color: ORDER.ink }}>
+                {tableNo > TABLE_COUNT ? "" : "번 테이블"}
+              </span>
             </div>
             <div style={{ flex: 1 }} />
             <button onClick={() => setTablePicker((v) => !v)} style={{ ...pill, whiteSpace: "nowrap" }}>
@@ -324,7 +326,7 @@ export default function OrderView() {
           {tablePicker && (
             <div style={{ ...cardBox, padding: 10, marginBottom: 20 }}>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 8 }}>
-                {TABLES.map((t) => (
+                {ALL_TABLES.map((t) => (
                   <button
                     key={t}
                     onClick={() => {
@@ -335,13 +337,13 @@ export default function OrderView() {
                       padding: "13px 0",
                       borderRadius: 10,
                       fontWeight: 700,
-                      fontSize: 15,
+                      fontSize: t > TABLE_COUNT ? 13 : 15,
                       background: t === tableNo ? ORDER.ink : "#FFF",
                       color: t === tableNo ? "#FFF" : ORDER.ink,
                       border: `1px solid ${t === tableNo ? ORDER.ink : ORDER.line}`,
                     }}
                   >
-                    {t}
+                    {t > TABLE_COUNT ? `포장${t - TABLE_COUNT}` : t}
                   </button>
                 ))}
               </div>
@@ -423,7 +425,7 @@ export default function OrderView() {
             ← 뒤로
           </button>
           <div style={{ flex: 1 }} />
-          <div style={{ color: ORDER.red, fontWeight: 700 }}>{tableNo}번 테이블</div>
+          <div style={{ color: ORDER.red, fontWeight: 700 }}>{tableLabel(tableNo)}</div>
         </div>
 
         <div className="app-scroll" style={{ flex: 1, overflowY: "auto", padding: "8px 18px 24px" }}>
@@ -539,7 +541,7 @@ export default function OrderView() {
           </button>
           <div style={{ flex: 1 }} />
           <button onClick={() => setStep("table")} style={pill}>
-            {tableNo}번 ▾
+            {tableLabel(tableNo)} ▾
           </button>
           <div style={{ color: ORDER.red, fontWeight: 700, fontSize: 15 }}>{people}인</div>
         </div>
@@ -691,7 +693,7 @@ export default function OrderView() {
             주문이 전송되었습니다
           </div>
           <div style={{ color: ORDER.red, fontWeight: 700, fontSize: 18, marginBottom: 6 }}>
-            {tableNo}번 테이블
+            {tableLabel(tableNo)}
           </div>
           <div style={{ color: ORDER.muted, fontSize: 14, marginBottom: 32, textAlign: "center" }}>
             주방에서 순서대로 조리해 내어드립니다

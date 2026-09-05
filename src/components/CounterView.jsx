@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getSupabase } from "@/lib/supabaseClient";
-import { DARK, font, serif, TABLES } from "@/lib/constants";
+import { DARK, font, serif, ALL_TABLES, TABLE_COUNT, tableLabel } from "@/lib/constants";
 import { wonLabel, elapsedLabel, isSeoulToday } from "@/lib/format";
 import { useConfirm } from "@/components/confirm";
 
@@ -105,7 +105,7 @@ export default function CounterView() {
 
   // 매출 취소: 무효(감사) 처리. 테이블로 복원하지 않고 매출에서만 제외, 취소 내역에 보존.
   async function cancelSale(order) {
-    if (!(await confirm(`${order.table_no}번 · ${wonLabel(order.total)} 매출을 취소할까요?\n테이블로 복원되지 않으며, 취소 내역에만 남습니다.`))) return;
+    if (!(await confirm(`${tableLabel(order.table_no)} · ${wonLabel(order.total)} 매출을 취소할까요?\n테이블로 복원되지 않으며, 취소 내역에만 남습니다.`))) return;
     try {
       const sb = getSupabase();
       const { error } = await sb
@@ -197,7 +197,7 @@ export default function CounterView() {
                       border: `1px solid ${DARK.line}`,
                     }}
                   >
-                    <div style={{ color: DARK.gold, fontWeight: 700, width: 34, flexShrink: 0 }}>{it.table_no}번</div>
+                    <div style={{ color: DARK.gold, fontWeight: 700, width: 44, flexShrink: 0 }}>{tableLabel(it.table_no)}</div>
                     <div style={{ flex: 1, minWidth: 0, fontSize: 15, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {it.name} <span style={{ color: DARK.muted }}>{it.people}인</span>
                     </div>
@@ -214,7 +214,7 @@ export default function CounterView() {
 
             {/* 테이블 그리드 — 화면 폭에 맞춰 여러 열 (가로 태블릿 대응) */}
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(190px, 1fr))", gap: 10 }}>
-              {TABLES.map((t) => {
+              {ALL_TABLES.map((t) => {
                 const os = byTable[t];
                 if (!os || os.length === 0) {
                   return (
@@ -232,8 +232,8 @@ export default function CounterView() {
                         opacity: 0.6,
                       }}
                     >
-                      <div style={{ fontWeight: 700, color: DARK.muted }}>{t}번</div>
-                      <div style={{ color: DARK.muted, fontSize: 13 }}>빈자리</div>
+                      <div style={{ fontWeight: 700, color: DARK.muted }}>{tableLabel(t)}</div>
+                      <div style={{ color: DARK.muted, fontSize: 13 }}>{t > TABLE_COUNT ? "포장" : "빈자리"}</div>
                     </div>
                   );
                 }
@@ -273,7 +273,7 @@ export default function CounterView() {
                     }}
                   >
                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <div style={{ fontFamily: serif, fontWeight: 700, fontSize: 20, color: DARK.gold }}>{t}번</div>
+                      <div style={{ fontFamily: serif, fontWeight: 700, fontSize: 20, color: DARK.gold }}>{tableLabel(t)}</div>
                       <div
                         style={{
                           fontSize: 11,
@@ -329,7 +329,7 @@ export default function CounterView() {
                 <div style={{ color: DARK.muted, fontSize: 12, padding: "10px 0 4px" }}>완료 주문 · 매출취소</div>
                 {doneToday.map((o, i) => (
                   <div key={o.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 0", borderTop: i === 0 ? "none" : `1px solid ${DARK.line}` }}>
-                    <div style={{ color: DARK.gold, fontWeight: 700, width: 38, fontSize: 14 }}>{o.table_no}번</div>
+                    <div style={{ color: DARK.gold, fontWeight: 700, width: 48, fontSize: 14 }}>{tableLabel(o.table_no)}</div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontWeight: 700, fontSize: 14 }}>{wonLabel(o.total)}</div>
                       <div style={{ color: DARK.muted, fontSize: 12 }}>{payLabel(o.pay_method)}</div>
@@ -358,7 +358,7 @@ export default function CounterView() {
                 </div>
                 {voidedToday.map((o, i) => (
                   <div key={o.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 0", borderTop: i === 0 ? "none" : `1px solid ${DARK.line}` }}>
-                    <div style={{ color: DARK.gold, fontWeight: 700, width: 38, fontSize: 13 }}>{o.table_no}번</div>
+                    <div style={{ color: DARK.gold, fontWeight: 700, width: 48, fontSize: 13 }}>{tableLabel(o.table_no)}</div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 13 }}>
                         <span style={{ textDecoration: "line-through", color: DARK.muted }}>{wonLabel(o.total)}</span>
@@ -392,7 +392,7 @@ export default function CounterView() {
               >
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
                   <div style={{ fontFamily: serif, fontWeight: 700, fontSize: 22, color: DARK.gold }}>
-                    {sheetTable}번 테이블
+                    {tableLabel(sheetTable)}
                   </div>
                   <div style={{ flex: 1 }} />
                   <div style={{ fontWeight: 700, fontSize: 18 }}>{wonLabel(total)}</div>
