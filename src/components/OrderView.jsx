@@ -548,10 +548,10 @@ export default function OrderView() {
         <div className="app-scroll" style={{ flex: 1, overflowY: "auto", padding: "6px 18px 20px" }}>
           <div style={{ display: "flex", alignItems: "baseline", gap: 8, margin: "8px 0 14px" }}>
             <div style={{ fontFamily: serif, fontWeight: 700, fontSize: 18 }}>
-              {people === 1 ? "1인 메뉴" : "한상 메뉴"}
+              {people === 1 ? "단품메뉴" : "한상 메뉴"}
             </div>
             <div style={{ color: ORDER.muted, fontSize: 12.5 }}>
-              {people === 1 ? "혼자 드실 수 있는 메뉴" : "2인분부터"}
+              {people === 1 ? "혼밥추천메뉴" : "2인분부터"}
             </div>
           </div>
 
@@ -597,8 +597,8 @@ export default function OrderView() {
 
                 <div style={{ padding: 14 }}>
                   {/* 이름 + 가격 한 줄 */}
-                  <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: m.description ? 6 : 12, flexWrap: "wrap" }}>
-                    <div style={{ fontFamily: serif, fontWeight: 700, fontSize: 18 }}>{m.name}</div>
+                  <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: m.description ? 8 : 12, flexWrap: "wrap" }}>
+                    <div style={{ fontFamily: serif, fontWeight: 700, fontSize: 23, lineHeight: 1.2 }}>{m.name}</div>
                     <div style={{ flex: 1 }} />
                     <div style={{ fontSize: 13.5, whiteSpace: "nowrap" }}>
                       <span style={{ color: ORDER.muted }}>1인 </span>
@@ -612,8 +612,8 @@ export default function OrderView() {
                     </div>
                   </div>
                   {m.description && (
-                    <div style={{ color: ORDER.muted, fontSize: 12.5, lineHeight: 1.6, marginBottom: 12 }}>
-                      {m.description}
+                    <div style={{ color: ORDER.muted, fontSize: 13, lineHeight: 1.7, marginBottom: 14, whiteSpace: "pre-line" }}>
+                      {m.description.trim()}
                     </div>
                   )}
 
