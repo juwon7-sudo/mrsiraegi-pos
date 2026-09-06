@@ -181,6 +181,32 @@ function MenuManager() {
     }
   }
 
+  // 순서 이동: 새 순서대로 sort 값을 1..N 재부여
+  async function move(r, dir) {
+    if (busyId) return;
+    const idx = rows.findIndex((x) => x.id === r.id);
+    const j = dir === "up" ? idx - 1 : idx + 1;
+    if (j < 0 || j >= rows.length) return;
+    const arr = [...rows];
+    [arr[idx], arr[j]] = [arr[j], arr[idx]];
+    setBusyId(r.id);
+    setErr("");
+    try {
+      const sb = getSupabase();
+      for (let i = 0; i < arr.length; i++) {
+        if ((arr[i].sort || 0) !== i + 1) {
+          const { error } = await sb.from("pos_menu_items").update({ sort: i + 1 }).eq("id", arr[i].id);
+          if (error) throw error;
+        }
+      }
+      await load();
+    } catch (e) {
+      setErr("순서 변경에 실패했습니다.");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   async function remove(r) {
     if (!(await confirm(`'${r.name}' 메뉴를 삭제할까요?`))) return;
     setBusyId(r.id);
@@ -226,11 +252,30 @@ function MenuManager() {
       {err && <div style={{ color: "#E88", fontSize: 13, marginBottom: 10 }}>{err}</div>}
       {loaded && rows.length === 0 && <div style={{ color: DARK.muted, textAlign: "center", marginTop: 40 }}>메뉴가 없습니다. + 메뉴 추가</div>}
 
-      {rows.map((r) => {
+      {rows.map((r, ri) => {
         const img = menuImageUrl(r.image_path);
         const busy = busyId === r.id;
         return (
           <div key={r.id} style={card}>
+            {/* 순서 이동 */}
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+              <div style={{ color: DARK.muted, fontSize: 12 }}>순서 {ri + 1}</div>
+              <div style={{ flex: 1 }} />
+              <button
+                onClick={() => move(r, "up")}
+                disabled={ri === 0 || busy}
+                style={{ ...btnGhost, padding: "8px 14px", minHeight: 0, opacity: ri === 0 || busy ? 0.4 : 1 }}
+              >
+                ↑ 위로
+              </button>
+              <button
+                onClick={() => move(r, "down")}
+                disabled={ri === rows.length - 1 || busy}
+                style={{ ...btnGhost, padding: "8px 14px", minHeight: 0, opacity: ri === rows.length - 1 || busy ? 0.4 : 1 }}
+              >
+                ↓ 아래로
+              </button>
+            </div>
             <div style={{ display: "flex", gap: 14 }}>
               {/* 사진 */}
               <div style={{ width: 96, flexShrink: 0 }}>
