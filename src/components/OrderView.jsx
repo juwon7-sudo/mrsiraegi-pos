@@ -79,6 +79,14 @@ export default function OrderView() {
   function addItem(item) {
     setQty((q) => ({ ...q, [item.id]: Math.max(item.min_people, people || item.min_people) }));
   }
+  // 담은 메뉴를 바로 취소(장바구니에서 제거) → '담기' 상태로 되돌림
+  function removeItem(item) {
+    setQty((q) => {
+      const n = { ...q };
+      delete n[item.id];
+      return n;
+    });
+  }
   function stepQty(item, delta) {
     setQty((q) => {
       const cur = q[item.id];
@@ -625,7 +633,7 @@ export default function OrderView() {
                       담기
                     </button>
                   ) : (
-                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                       <button
                         onClick={() => stepQty(m, -1)}
                         disabled={cnt <= unitMin(m)}
@@ -641,6 +649,12 @@ export default function OrderView() {
                         style={{ ...stepBtn, background: ORDER.ink, color: "#FFF" }}
                       >
                         +
+                      </button>
+                      <button
+                        onClick={() => removeItem(m)}
+                        style={{ ...stepBtn, width: "auto", padding: "0 14px", background: "#FBEAE8", color: ORDER.red, fontSize: 14 }}
+                      >
+                        취소
                       </button>
                     </div>
                   )}
