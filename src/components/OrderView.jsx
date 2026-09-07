@@ -557,12 +557,12 @@ export default function OrderView() {
 
           <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
             <div style={{ fontFamily: serif, fontWeight: 700, fontSize: 19, lineHeight: 1.25, wordBreak: "keep-all" }}>{m.name}</div>
-            <div style={{ marginTop: 6, fontSize: 18, fontWeight: 700 }}>
+            <div style={{ marginTop: 6, fontFamily: serif, fontSize: 17, fontWeight: 700 }}>
               {cnt}인 <span style={{ color: ORDER.red }}>{wonLabel(m.price * cnt)}</span>
             </div>
-            <div style={{ marginTop: "auto", paddingTop: 8, display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ marginTop: "auto", paddingTop: 8 }}>
               {!added ? (
-                <>
+                <div style={{ display: "flex" }}>
                   <div style={{ flex: 1 }} />
                   <button
                     onClick={() => addItem(m)}
@@ -570,27 +570,31 @@ export default function OrderView() {
                   >
                     담기
                   </button>
-                </>
+                </div>
               ) : (
-                <>
-                  <button
-                    onClick={() => stepQty(m, -1)}
-                    disabled={cnt <= unitMin(m)}
-                    style={{ ...miniStep, background: "#F1EEE4", color: ORDER.ink, opacity: cnt <= unitMin(m) ? 0.4 : 1 }}
-                  >
-                    −
-                  </button>
-                  <div style={{ flex: 1, textAlign: "center", fontWeight: 700, fontSize: 16 }}>{cnt}인</div>
-                  <button onClick={() => stepQty(m, +1)} style={{ ...miniStep, background: ORDER.ink, color: "#FFF" }}>
-                    +
-                  </button>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {/* − 수량 + 한 줄 */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <button
+                      onClick={() => stepQty(m, -1)}
+                      disabled={cnt <= unitMin(m)}
+                      style={{ ...miniStep, background: "#F1EEE4", color: ORDER.ink, opacity: cnt <= unitMin(m) ? 0.4 : 1 }}
+                    >
+                      −
+                    </button>
+                    <div style={{ flex: 1, textAlign: "center", fontWeight: 700, fontSize: 16 }}>{cnt}인</div>
+                    <button onClick={() => stepQty(m, +1)} style={{ ...miniStep, background: ORDER.ink, color: "#FFF" }}>
+                      +
+                    </button>
+                  </div>
+                  {/* 취소: 아래 한 줄, 가로 텍스트 */}
                   <button
                     onClick={() => removeItem(m)}
-                    style={{ ...miniStep, width: "auto", padding: "0 12px", background: "#FBEAE8", color: ORDER.red, fontSize: 13 }}
+                    style={{ width: "100%", padding: "9px 0", borderRadius: 10, background: "#FBEAE8", color: ORDER.red, fontWeight: 700, fontSize: 13, minHeight: 40, whiteSpace: "nowrap" }}
                   >
-                    취소
+                    주문 취소
                   </button>
-                </>
+                </div>
               )}
             </div>
           </div>
