@@ -217,6 +217,29 @@ export default function OrderView({ customer = false }) {
     }
   }
 
+  // 손님용: 내 주문 조회(읽기 전용)
+  async function openMyOrders() {
+    setErr("");
+    setManageLoading(true);
+    setStep("myorders");
+    try {
+      const sb = getSupabase();
+      const { data, error } = await sb
+        .from("pos_orders")
+        .select("*, pos_order_items(*)")
+        .eq("table_no", tableNo)
+        .neq("status", "done")
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      setManageOrders(data || []);
+    } catch (e) {
+      setErr("주문을 불러오지 못했습니다.");
+      setManageOrders([]);
+    } finally {
+      setManageLoading(false);
+    }
+  }
+
   // 로컬 수량 변경(저장 전 미리보기)
   function bumpItem(orderId, itemId, delta) {
     setManageOrders((prev) =>
@@ -380,6 +403,24 @@ export default function OrderView({ customer = false }) {
               }}
             >
               주문 내역 · 수정 →
+            </button>
+          )}
+          {customer && (
+            <button
+              onClick={openMyOrders}
+              style={{
+                width: "100%",
+                padding: "12px 0",
+                borderRadius: 12,
+                background: "#FFF",
+                border: `1px solid ${ORDER.line}`,
+                color: ORDER.ink,
+                fontWeight: 600,
+                fontSize: 13.5,
+                marginBottom: 20,
+              }}
+            >
+              내 주문 확인 →
             </button>
           )}
 
@@ -727,6 +768,11 @@ export default function OrderView({ customer = false }) {
             <button onClick={() => setStep("menu")} style={customer ? { ...primaryBtn } : lightBtn}>
               추가 주문하기
             </button>
+            {customer && (
+              <button onClick={openMyOrders} style={lightBtn}>
+                내 주문 확인
+              </button>
+            )}
             {!customer && (
               <button
                 onClick={() => {
@@ -740,6 +786,72 @@ export default function OrderView({ customer = false }) {
             )}
           </div>
         </div>
+      </div>
+    );
+  }
+
+  // ========== STEP: 내 주문 확인 (손님, 조회 전용) ==========
+  if (step === "myorders") {
+    const grand = manageOrders.reduce(
+      (s, o) => s + (o.pos_order_items || []).reduce((a, it) => a + (it.amount || 0), 0),
+      0
+    );
+    return (
+      <div style={wrap}>
+        <div style={topRow}>
+          <button onClick={() => setStep("table")} style={{ ...pill, fontWeight: 700 }}>
+            ← 뒤로
+          </button>
+          <div style={{ flex: 1 }} />
+          <div style={{ color: ORDER.red, fontWeight: 700 }}>{tableLabel(tableNo)}</div>
+        </div>
+
+        <div className="app-scroll" style={{ flex: 1, overflowY: "auto", padding: "8px 18px 20px" }}>
+          <div style={{ fontFamily: serif, fontWeight: 700, fontSize: 20, margin: "6px 0 4px" }}>내 주문 내역</div>
+          <div style={{ color: ORDER.muted, fontSize: 12.5, marginBottom: 14 }}>주문하신 내역입니다 (조회 전용)</div>
+          {err && <div style={{ color: ORDER.red, fontSize: 13, marginBottom: 10 }}>{err}</div>}
+          {manageLoading && <div style={{ color: ORDER.muted, fontSize: 13.5 }}>불러오는 중…</div>}
+          {!manageLoading && manageOrders.length === 0 && (
+            <div style={{ color: ORDER.muted, textAlign: "center", marginTop: 50, fontSize: 13.5 }}>
+              아직 주문 내역이 없습니다
+            </div>
+          )}
+
+          {manageOrders.map((o, oi) => (
+            <div key={o.id} style={{ ...cardBox, padding: 14, marginBottom: 12 }}>
+              <div style={{ fontWeight: 700, fontSize: 13.5, color: ORDER.muted, marginBottom: 6 }}>주문 {oi + 1}</div>
+              {(o.pos_order_items || []).map((it) => (
+                <div key={it.id} style={{ display: "flex", padding: "7px 0", borderTop: `1px solid ${ORDER.line}`, fontSize: 14.5 }}>
+                  <div style={{ flex: 1 }}>
+                    {it.name} <span style={{ color: ORDER.muted }}>{it.people}인</span>
+                  </div>
+                </div>
+              ))}
+              <div style={{ display: "flex", marginTop: 8, fontWeight: 700, fontSize: 14 }}>
+                <div style={{ flex: 1 }}>합계</div>
+                <div style={{ color: ORDER.red }}>
+                  {wonLabel((o.pos_order_items || []).reduce((a, it) => a + (it.amount || 0), 0))}
+                </div>
+              </div>
+            </div>
+          ))}
+
+          {manageOrders.length > 0 && (
+            <div style={{ ...cardBox, padding: 14, background: "#FBF8F1", display: "flex", alignItems: "center" }}>
+              <div style={{ flex: 1, fontWeight: 700 }}>총 합계</div>
+              <div style={{ fontWeight: 700, fontSize: 18, color: ORDER.red }}>{wonLabel(grand)}</div>
+            </div>
+          )}
+        </div>
+
+        <BottomBar>
+          <button onClick={() => setStep("table")} style={{ ...lightBtn, flex: 1 }}>
+            메뉴로
+          </button>
+          <button onClick={openMyOrders} style={{ ...primaryBtn, flex: 1 }}>
+            새로고침
+          </button>
+        </BottomBar>
       </div>
     );
   }
