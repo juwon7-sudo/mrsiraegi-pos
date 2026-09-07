@@ -560,43 +560,6 @@ export default function OrderView() {
             <div style={{ marginTop: 6, fontFamily: serif, fontSize: 17, fontWeight: 700 }}>
               {cnt}인 <span style={{ color: ORDER.red }}>{wonLabel(m.price * cnt)}</span>
             </div>
-            <div style={{ marginTop: "auto", paddingTop: 8 }}>
-              {!added ? (
-                <div style={{ display: "flex" }}>
-                  <div style={{ flex: 1 }} />
-                  <button
-                    onClick={() => addItem(m)}
-                    style={{ background: ORDER.red, color: "#FFF", fontWeight: 700, fontSize: 14, padding: "9px 24px", borderRadius: 10, minHeight: 40 }}
-                  >
-                    담기
-                  </button>
-                </div>
-              ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  {/* − 수량 + 한 줄 */}
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <button
-                      onClick={() => stepQty(m, -1)}
-                      disabled={cnt <= unitMin(m)}
-                      style={{ ...miniStep, background: "#F1EEE4", color: ORDER.ink, opacity: cnt <= unitMin(m) ? 0.4 : 1 }}
-                    >
-                      −
-                    </button>
-                    <div style={{ flex: 1, textAlign: "center", fontWeight: 700, fontSize: 16 }}>{cnt}인</div>
-                    <button onClick={() => stepQty(m, +1)} style={{ ...miniStep, background: ORDER.ink, color: "#FFF" }}>
-                      +
-                    </button>
-                  </div>
-                  {/* 취소: 아래 한 줄, 가로 텍스트 */}
-                  <button
-                    onClick={() => removeItem(m)}
-                    style={{ width: "100%", padding: "9px 0", borderRadius: 10, background: "#FBEAE8", color: ORDER.red, fontWeight: 700, fontSize: 13, minHeight: 40, whiteSpace: "nowrap" }}
-                  >
-                    주문 취소
-                  </button>
-                </div>
-              )}
-            </div>
           </div>
         </div>
 
@@ -606,6 +569,42 @@ export default function OrderView() {
             {m.description.trim()}
           </div>
         )}
+
+        {/* 담기 / 수량·취소 — 전체폭, 아래로 */}
+        <div style={{ marginTop: 12 }}>
+          {!added ? (
+            <button
+              onClick={() => addItem(m)}
+              style={{ ...primaryBtn, padding: "12px 0", minHeight: 46, fontSize: 15 }}
+            >
+              담기
+            </button>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {/* − 수량 + 한 줄 */}
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <button
+                  onClick={() => stepQty(m, -1)}
+                  disabled={cnt <= unitMin(m)}
+                  style={{ ...stepBtn, background: "#F1EEE4", color: ORDER.ink, opacity: cnt <= unitMin(m) ? 0.4 : 1 }}
+                >
+                  −
+                </button>
+                <div style={{ flex: 1, textAlign: "center", fontWeight: 700, fontSize: 17 }}>{cnt}인</div>
+                <button onClick={() => stepQty(m, +1)} style={{ ...stepBtn, background: ORDER.ink, color: "#FFF" }}>
+                  +
+                </button>
+              </div>
+              {/* 주문 취소 — 아래 한 줄 전체폭 */}
+              <button
+                onClick={() => removeItem(m)}
+                style={{ width: "100%", padding: "11px 0", borderRadius: 12, background: "#FBEAE8", color: ORDER.red, fontWeight: 700, fontSize: 14, minHeight: 46, whiteSpace: "nowrap" }}
+              >
+                주문 취소
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     );
   }
