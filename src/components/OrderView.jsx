@@ -724,13 +724,16 @@ export default function OrderView({ customer = false }) {
             <div style={{ fontWeight: 700, fontSize: 15 }}>{totalCount}개 메뉴</div>
             <div style={{ color: ORDER.muted, fontSize: 13 }}>{wonLabel(totalAmount)}</div>
           </div>
-          <button
-            disabled={totalCount === 0 || submitting}
-            onClick={submitOrder}
-            style={{ ...primaryBtn, width: "auto", padding: "0 28px", opacity: totalCount === 0 || submitting ? 0.45 : 1 }}
-          >
-            {submitting ? "전송 중…" : "주문하기"}
-          </button>
+          {/* 손님 모드는 각 메뉴 카드에 '주문하기'가 있어 하단 버튼 숨김 */}
+          {!customer && (
+            <button
+              disabled={totalCount === 0 || submitting}
+              onClick={submitOrder}
+              style={{ ...primaryBtn, width: "auto", padding: "0 28px", opacity: totalCount === 0 || submitting ? 0.45 : 1 }}
+            >
+              {submitting ? "전송 중…" : "주문하기"}
+            </button>
+          )}
         </BottomBar>
         {err && step === "menu" && (
           <div style={{ padding: "0 18px 10px", color: ORDER.red, fontSize: 13 }}>{err}</div>
