@@ -649,13 +649,24 @@ export default function OrderView({ customer = false }) {
                   +
                 </button>
               </div>
-              {/* 주문 취소 — 아래 한 줄 전체폭 */}
-              <button
-                onClick={() => removeItem(m)}
-                style={{ width: "100%", padding: "11px 0", borderRadius: 12, background: "#FBEAE8", color: ORDER.red, fontWeight: 700, fontSize: 14, minHeight: 46, whiteSpace: "nowrap" }}
-              >
-                주문 취소
-              </button>
+              {/* 주문하기(손님 모드, 크게) + 주문 취소 */}
+              <div style={{ display: "flex", gap: 8 }}>
+                {customer && (
+                  <button
+                    onClick={submitOrder}
+                    disabled={submitting || selected.length === 0}
+                    style={{ flex: 2, padding: "15px 0", borderRadius: 12, background: ORDER.red, color: "#FFF", fontWeight: 700, fontSize: 18, minHeight: 58, opacity: submitting || selected.length === 0 ? 0.5 : 1, whiteSpace: "nowrap" }}
+                  >
+                    {submitting ? "전송 중…" : "주문하기"}
+                  </button>
+                )}
+                <button
+                  onClick={() => removeItem(m)}
+                  style={{ flex: 1, padding: "13px 0", borderRadius: 12, background: "#FBEAE8", color: ORDER.red, fontWeight: 700, fontSize: 14, minHeight: 58, whiteSpace: "nowrap" }}
+                >
+                  주문 취소
+                </button>
+              </div>
             </div>
           )}
         </div>
