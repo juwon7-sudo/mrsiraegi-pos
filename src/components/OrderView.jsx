@@ -26,6 +26,15 @@ export default function OrderView() {
   const [manageBusyId, setManageBusyId] = useState(null); // 처리 중인 주문 id
   const [confirm, confirmModal] = useConfirm();
 
+  // QR코드 등으로 ?table=N 이 들어오면 해당 테이블로 시작
+  useEffect(() => {
+    try {
+      const p = new URLSearchParams(window.location.search);
+      const t = parseInt(p.get("table") || p.get("t") || "", 10);
+      if (ALL_TABLES.includes(t)) setTableNo(t);
+    } catch {}
+  }, []);
+
   useEffect(() => {
     let alive = true;
     (async () => {
