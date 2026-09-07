@@ -6,7 +6,7 @@ import { ORDER, font, serif, ALL_TABLES, TABLE_COUNT, tableLabel, PARTY_OPTIONS 
 import { wonLabel } from "@/lib/format";
 
 /* 주문 화면 — 라이트 크림 테마, 다단계 플로우 (테이블/인원 → 메뉴 → 확인) */
-export default function OrderView() {
+export default function OrderView({ customer = false }) {
   const [step, setStep] = useState("table"); // table | menu | confirm | history
   const [tableNo, setTableNo] = useState(1);
   const [people, setPeople] = useState(null);
@@ -330,12 +330,14 @@ export default function OrderView() {
               </span>
             </div>
             <div style={{ flex: 1 }} />
-            <button onClick={() => setTablePicker((v) => !v)} style={{ ...pill, whiteSpace: "nowrap" }}>
-              테이블 바꾸기 ▾
-            </button>
+            {!customer && (
+              <button onClick={() => setTablePicker((v) => !v)} style={{ ...pill, whiteSpace: "nowrap" }}>
+                테이블 바꾸기 ▾
+              </button>
+            )}
           </div>
 
-          {tablePicker && (
+          {!customer && tablePicker && (
             <div style={{ ...cardBox, padding: 10, marginBottom: 20 }}>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 8 }}>
                 {ALL_TABLES.map((t) => (
@@ -362,22 +364,24 @@ export default function OrderView() {
             </div>
           )}
 
-          <button
-            onClick={openManage}
-            style={{
-              width: "100%",
-              padding: "12px 0",
-              borderRadius: 12,
-              background: "#FFF",
-              border: `1px solid ${ORDER.line}`,
-              color: ORDER.ink,
-              fontWeight: 600,
-              fontSize: 13.5,
-              marginBottom: 20,
-            }}
-          >
-            주문 내역 · 수정 →
-          </button>
+          {!customer && (
+            <button
+              onClick={openManage}
+              style={{
+                width: "100%",
+                padding: "12px 0",
+                borderRadius: 12,
+                background: "#FFF",
+                border: `1px solid ${ORDER.line}`,
+                color: ORDER.ink,
+                fontWeight: 600,
+                fontSize: 13.5,
+                marginBottom: 20,
+              }}
+            >
+              주문 내역 · 수정 →
+            </button>
+          )}
 
           <div style={{ fontFamily: serif, fontWeight: 700, fontSize: 19, marginBottom: 3 }}>
             몇 분이 오셨나요?
@@ -715,21 +719,25 @@ export default function OrderView() {
           </div>
 
           <div style={{ width: "100%", maxWidth: 320, display: "flex", flexDirection: "column", gap: 10 }}>
-            <button onClick={openManage} style={{ ...primaryBtn }}>
-              주문 내역 · 수정
-            </button>
-            <button onClick={() => setStep("menu")} style={lightBtn}>
+            {!customer && (
+              <button onClick={openManage} style={{ ...primaryBtn }}>
+                주문 내역 · 수정
+              </button>
+            )}
+            <button onClick={() => setStep("menu")} style={customer ? { ...primaryBtn } : lightBtn}>
               추가 주문하기
             </button>
-            <button
-              onClick={() => {
-                setPeople(null);
-                setStep("table");
-              }}
-              style={lightBtn}
-            >
-              다른 테이블 주문
-            </button>
+            {!customer && (
+              <button
+                onClick={() => {
+                  setPeople(null);
+                  setStep("table");
+                }}
+                style={lightBtn}
+              >
+                다른 테이블 주문
+              </button>
+            )}
           </div>
         </div>
       </div>
