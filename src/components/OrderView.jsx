@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { getSupabase, menuImageUrl } from "@/lib/supabaseClient";
 import { useConfirm } from "@/components/confirm";
 import { ORDER, font, serif, ALL_TABLES, TABLE_COUNT, tableLabel, PARTY_OPTIONS } from "@/lib/constants";
@@ -534,75 +534,85 @@ export default function OrderView() {
     );
   }
 
-  // 메뉴 카드 하나 렌더 (한상·1인 공용)
+  // 메뉴 카드 하나 렌더 (가로형 컴팩트 — 한 화면에 여러 개 보이게)
   function renderCard(m) {
     const added = qty[m.id] != null;
     const cnt = qty[m.id] || m.min_people;
+    const img = menuImageUrl(m.image_path);
     return (
       <div
         key={m.id}
-        style={{ ...cardBox, border: `2px solid ${added ? ORDER.red : ORDER.line}`, marginBottom: 16, overflow: "hidden" }}
+        style={{ ...cardBox, border: `2px solid ${added ? ORDER.red : ORDER.line}`, marginBottom: 10, padding: 10, display: "flex", gap: 12 }}
       >
-        <div style={photoPlaceholder}>
-          {menuImageUrl(m.image_path) && (
-            <img
-              src={menuImageUrl(m.image_path)}
-              alt={m.name}
-              style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
-            />
+        {/* 사진 썸네일 */}
+        <div style={{ position: "relative", width: 96, height: 96, borderRadius: 12, overflow: "hidden", flexShrink: 0, background: "linear-gradient(135deg,#8A5A3B 0%,#6E4126 60%,#4E2E1A 100%)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          {img ? (
+            <img src={img} alt={m.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          ) : (
+            <span style={{ fontFamily: serif, fontWeight: 700, fontSize: 12, color: "#FFF9EC", textAlign: "center", padding: 4 }}>{m.name}</span>
           )}
-          {added && <div style={addedBadge}>{cnt}인 담김</div>}
-          {!menuImageUrl(m.image_path) && (
-            <div style={{ fontFamily: serif, fontWeight: 700, fontSize: 22, color: "#FFF9EC" }}>{m.name}</div>
-          )}
+          {added && <div style={{ ...addedBadge, top: 6, left: 6, fontSize: 10, padding: "3px 7px" }}>{cnt}인</div>}
         </div>
 
-        <div style={{ padding: 14 }}>
-          <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: m.description ? 8 : 12, flexWrap: "wrap" }}>
-            <div style={{ fontFamily: serif, fontWeight: 700, fontSize: 23, lineHeight: 1.2 }}>{m.name}</div>
+        {/* 정보 */}
+        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+            <div style={{ fontFamily: serif, fontWeight: 700, fontSize: 19, lineHeight: 1.2, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.name}</div>
             <div style={{ flex: 1 }} />
-            <div style={{ fontSize: 13.5, whiteSpace: "nowrap" }}>
-              <span style={{ color: ORDER.muted }}>1인 </span>
+            <div style={{ fontSize: 17.5, whiteSpace: "nowrap" }}>
               <b>{wonLabel(m.price)}</b>
-              {cnt > 1 && (
-                <>
-                  <span style={{ color: ORDER.muted }}> / {cnt}인 </span>
-                  <b style={{ color: ORDER.red }}>{wonLabel(m.price * cnt)}</b>
-                </>
-              )}
+              {cnt > 1 && <b style={{ color: ORDER.red }}> · {cnt}인 {wonLabel(m.price * cnt)}</b>}
             </div>
           </div>
           {m.description && (
-            <div style={{ color: ORDER.muted, fontSize: 13, lineHeight: 1.7, marginBottom: 14, whiteSpace: "pre-line" }}>
+            <div
+              style={{
+                color: ORDER.muted,
+                fontSize: 12.5,
+                lineHeight: 1.5,
+                marginTop: 4,
+                overflow: "hidden",
+                display: "-webkit-box",
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: "vertical",
+              }}
+            >
               {m.description.trim()}
             </div>
           )}
-
-          {!added ? (
-            <button onClick={() => addItem(m)} style={{ ...primaryBtn, padding: "13px 0" }}>
-              담기
-            </button>
-          ) : (
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <button
-                onClick={() => stepQty(m, -1)}
-                disabled={cnt <= unitMin(m)}
-                style={{ ...stepBtn, background: "#F1EEE4", color: ORDER.ink, opacity: cnt <= unitMin(m) ? 0.4 : 1 }}
-              >
-                −
-              </button>
-              <div style={{ flex: 1, textAlign: "center", fontWeight: 700, fontSize: 17 }}>{cnt}인</div>
-              <button onClick={() => stepQty(m, +1)} style={{ ...stepBtn, background: ORDER.ink, color: "#FFF" }}>
-                +
-              </button>
-              <button
-                onClick={() => removeItem(m)}
-                style={{ ...stepBtn, width: "auto", padding: "0 14px", background: "#FBEAE8", color: ORDER.red, fontSize: 14 }}
-              >
-                취소
-              </button>
-            </div>
-          )}
+          <div style={{ marginTop: "auto", paddingTop: 8, display: "flex", alignItems: "center", gap: 8 }}>
+            {!added ? (
+              <>
+                <div style={{ flex: 1 }} />
+                <button
+                  onClick={() => addItem(m)}
+                  style={{ background: ORDER.red, color: "#FFF", fontWeight: 700, fontSize: 14, padding: "9px 24px", borderRadius: 10, minHeight: 40 }}
+                >
+                  담기
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={() => stepQty(m, -1)}
+                  disabled={cnt <= unitMin(m)}
+                  style={{ ...miniStep, background: "#F1EEE4", color: ORDER.ink, opacity: cnt <= unitMin(m) ? 0.4 : 1 }}
+                >
+                  −
+                </button>
+                <div style={{ flex: 1, textAlign: "center", fontWeight: 700, fontSize: 16 }}>{cnt}인</div>
+                <button onClick={() => stepQty(m, +1)} style={{ ...miniStep, background: ORDER.ink, color: "#FFF" }}>
+                  +
+                </button>
+                <button
+                  onClick={() => removeItem(m)}
+                  style={{ ...miniStep, width: "auto", padding: "0 12px", background: "#FBEAE8", color: ORDER.red, fontSize: 13 }}
+                >
+                  취소
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </div>
     );
@@ -610,8 +620,7 @@ export default function OrderView() {
 
   // ========== STEP: 메뉴 ==========
   if (step === "menu") {
-    const hansang = menu.filter((m) => (m.min_people || 1) >= 2);
-    const single = menu.filter((m) => (m.min_people || 1) <= 1);
+    // 관리(sort) 순서 그대로. 종류가 바뀌는 지점에만 섹션 제목을 넣는다.
     return (
       <div style={wrap}>
         <div style={topRow}>
@@ -634,27 +643,24 @@ export default function OrderView() {
             </div>
           )}
 
-          {/* 한상 메뉴 (위) */}
-          {hansang.length > 0 && (
-            <>
-              <div style={{ display: "flex", alignItems: "baseline", gap: 8, margin: "8px 0 14px" }}>
-                <div style={{ fontFamily: serif, fontWeight: 700, fontSize: 18 }}>한상 메뉴</div>
-                <div style={{ color: ORDER.muted, fontSize: 12.5 }}>2인분부터</div>
-              </div>
-              {hansang.map((m) => renderCard(m))}
-            </>
-          )}
-
-          {/* 1인(단품) 메뉴 (아래) */}
-          {single.length > 0 && (
-            <>
-              <div style={{ display: "flex", alignItems: "baseline", gap: 8, margin: "18px 0 14px" }}>
-                <div style={{ fontFamily: serif, fontWeight: 700, fontSize: 18 }}>단품메뉴</div>
-                <div style={{ color: ORDER.muted, fontSize: 12.5 }}>혼밥추천메뉴</div>
-              </div>
-              {single.map((m) => renderCard(m))}
-            </>
-          )}
+          {/* 관리 순서(sort) 그대로. 종류(한상/단품)가 바뀌는 지점에만 제목 표시 */}
+          {menu.map((m, i) => {
+            const isH = (m.min_people || 1) >= 2;
+            const prev = menu[i - 1];
+            const prevIsH = prev ? (prev.min_people || 1) >= 2 : null;
+            const showHeader = prevIsH === null || isH !== prevIsH;
+            return (
+              <Fragment key={m.id}>
+                {showHeader && (
+                  <div style={{ display: "flex", alignItems: "baseline", gap: 8, margin: i === 0 ? "6px 0 12px" : "16px 0 12px" }}>
+                    <div style={{ fontFamily: serif, fontWeight: 700, fontSize: 18 }}>{isH ? "한상 메뉴" : "단품메뉴"}</div>
+                    <div style={{ color: ORDER.muted, fontSize: 12.5 }}>{isH ? "2인분부터" : "혼밥추천메뉴"}</div>
+                  </div>
+                )}
+                {renderCard(m)}
+              </Fragment>
+            );
+          })}
         </div>
 
         <BottomBar>
