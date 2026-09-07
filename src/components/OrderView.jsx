@@ -542,78 +542,66 @@ export default function OrderView() {
     return (
       <div
         key={m.id}
-        style={{ ...cardBox, border: `2px solid ${added ? ORDER.red : ORDER.line}`, marginBottom: 10, padding: 10, display: "flex", gap: 12 }}
+        style={{ ...cardBox, border: `2px solid ${added ? ORDER.red : ORDER.line}`, marginBottom: 10, padding: 10 }}
       >
-        {/* 사진 썸네일 */}
-        <div style={{ position: "relative", width: 96, height: 96, borderRadius: 12, overflow: "hidden", flexShrink: 0, background: "linear-gradient(135deg,#8A5A3B 0%,#6E4126 60%,#4E2E1A 100%)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-          {img ? (
-            <img src={img} alt={m.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-          ) : (
-            <span style={{ fontFamily: serif, fontWeight: 700, fontSize: 12, color: "#FFF9EC", textAlign: "center", padding: 4 }}>{m.name}</span>
-          )}
-          {added && <div style={{ ...addedBadge, top: 6, left: 6, fontSize: 10, padding: "3px 7px" }}>{cnt}인</div>}
+        {/* 상단: 사진(크게, 가로) + 오른쪽 이름·가격·담기 */}
+        <div style={{ display: "flex", gap: 12 }}>
+          <div style={{ position: "relative", width: 168, height: 124, borderRadius: 12, overflow: "hidden", flexShrink: 0, background: "linear-gradient(135deg,#8A5A3B 0%,#6E4126 60%,#4E2E1A 100%)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            {img ? (
+              <img src={img} alt={m.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            ) : (
+              <span style={{ fontFamily: serif, fontWeight: 700, fontSize: 13, color: "#FFF9EC", textAlign: "center", padding: 4 }}>{m.name}</span>
+            )}
+            {added && <div style={{ ...addedBadge, top: 6, left: 6, fontSize: 10, padding: "3px 7px" }}>{cnt}인</div>}
+          </div>
+
+          <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
+            <div style={{ fontFamily: serif, fontWeight: 700, fontSize: 19, lineHeight: 1.25, wordBreak: "keep-all" }}>{m.name}</div>
+            <div style={{ marginTop: 6, fontSize: 18, fontWeight: 700 }}>
+              {cnt}인 <span style={{ color: ORDER.red }}>{wonLabel(m.price * cnt)}</span>
+            </div>
+            <div style={{ marginTop: "auto", paddingTop: 8, display: "flex", alignItems: "center", gap: 8 }}>
+              {!added ? (
+                <>
+                  <div style={{ flex: 1 }} />
+                  <button
+                    onClick={() => addItem(m)}
+                    style={{ background: ORDER.red, color: "#FFF", fontWeight: 700, fontSize: 14, padding: "9px 24px", borderRadius: 10, minHeight: 40 }}
+                  >
+                    담기
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={() => stepQty(m, -1)}
+                    disabled={cnt <= unitMin(m)}
+                    style={{ ...miniStep, background: "#F1EEE4", color: ORDER.ink, opacity: cnt <= unitMin(m) ? 0.4 : 1 }}
+                  >
+                    −
+                  </button>
+                  <div style={{ flex: 1, textAlign: "center", fontWeight: 700, fontSize: 16 }}>{cnt}인</div>
+                  <button onClick={() => stepQty(m, +1)} style={{ ...miniStep, background: ORDER.ink, color: "#FFF" }}>
+                    +
+                  </button>
+                  <button
+                    onClick={() => removeItem(m)}
+                    style={{ ...miniStep, width: "auto", padding: "0 12px", background: "#FBEAE8", color: ORDER.red, fontSize: 13 }}
+                  >
+                    취소
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
         </div>
 
-        {/* 정보 */}
-        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
-          <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-            <div style={{ fontFamily: serif, fontWeight: 700, fontSize: 19, lineHeight: 1.2, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.name}</div>
-            <div style={{ flex: 1 }} />
-            <div style={{ fontSize: 17.5, whiteSpace: "nowrap" }}>
-              <b>{wonLabel(m.price)}</b>
-              {cnt > 1 && <b style={{ color: ORDER.red }}> · {cnt}인 {wonLabel(m.price * cnt)}</b>}
-            </div>
+        {/* 사진 아래: 설명 */}
+        {m.description && (
+          <div style={{ color: ORDER.muted, fontSize: 12.5, lineHeight: 1.6, marginTop: 10, whiteSpace: "pre-line" }}>
+            {m.description.trim()}
           </div>
-          {m.description && (
-            <div
-              style={{
-                color: ORDER.muted,
-                fontSize: 12.5,
-                lineHeight: 1.5,
-                marginTop: 4,
-                overflow: "hidden",
-                display: "-webkit-box",
-                WebkitLineClamp: 2,
-                WebkitBoxOrient: "vertical",
-              }}
-            >
-              {m.description.trim()}
-            </div>
-          )}
-          <div style={{ marginTop: "auto", paddingTop: 8, display: "flex", alignItems: "center", gap: 8 }}>
-            {!added ? (
-              <>
-                <div style={{ flex: 1 }} />
-                <button
-                  onClick={() => addItem(m)}
-                  style={{ background: ORDER.red, color: "#FFF", fontWeight: 700, fontSize: 14, padding: "9px 24px", borderRadius: 10, minHeight: 40 }}
-                >
-                  담기
-                </button>
-              </>
-            ) : (
-              <>
-                <button
-                  onClick={() => stepQty(m, -1)}
-                  disabled={cnt <= unitMin(m)}
-                  style={{ ...miniStep, background: "#F1EEE4", color: ORDER.ink, opacity: cnt <= unitMin(m) ? 0.4 : 1 }}
-                >
-                  −
-                </button>
-                <div style={{ flex: 1, textAlign: "center", fontWeight: 700, fontSize: 16 }}>{cnt}인</div>
-                <button onClick={() => stepQty(m, +1)} style={{ ...miniStep, background: ORDER.ink, color: "#FFF" }}>
-                  +
-                </button>
-                <button
-                  onClick={() => removeItem(m)}
-                  style={{ ...miniStep, width: "auto", padding: "0 12px", background: "#FBEAE8", color: ORDER.red, fontSize: 13 }}
-                >
-                  취소
-                </button>
-              </>
-            )}
-          </div>
-        </div>
+        )}
       </div>
     );
   }
