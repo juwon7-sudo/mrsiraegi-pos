@@ -649,17 +649,15 @@ export default function OrderView({ customer = false }) {
                   +
                 </button>
               </div>
-              {/* 주문하기(손님 모드, 크게) + 주문 취소 */}
+              {/* 주문하기(크게) + 주문 취소 — 직원·손님 화면 동일 */}
               <div style={{ display: "flex", gap: 8 }}>
-                {customer && (
-                  <button
-                    onClick={submitOrder}
-                    disabled={submitting || selected.length === 0}
-                    style={{ flex: 2, padding: "15px 0", borderRadius: 12, background: ORDER.red, color: "#FFF", fontWeight: 700, fontSize: 18, minHeight: 58, opacity: submitting || selected.length === 0 ? 0.5 : 1, whiteSpace: "nowrap" }}
-                  >
-                    {submitting ? "전송 중…" : "주문하기"}
-                  </button>
-                )}
+                <button
+                  onClick={submitOrder}
+                  disabled={submitting || selected.length === 0}
+                  style={{ flex: 2, padding: "15px 0", borderRadius: 12, background: ORDER.red, color: "#FFF", fontWeight: 700, fontSize: 18, minHeight: 58, opacity: submitting || selected.length === 0 ? 0.5 : 1, whiteSpace: "nowrap" }}
+                >
+                  {submitting ? "전송 중…" : "주문하기"}
+                </button>
                 <button
                   onClick={() => removeItem(m)}
                   style={{ flex: 1, padding: "13px 0", borderRadius: 12, background: "#FBEAE8", color: ORDER.red, fontWeight: 700, fontSize: 14, minHeight: 58, whiteSpace: "nowrap" }}
@@ -724,16 +722,7 @@ export default function OrderView({ customer = false }) {
             <div style={{ fontWeight: 700, fontSize: 15 }}>{totalCount}개 메뉴</div>
             <div style={{ color: ORDER.muted, fontSize: 13 }}>{wonLabel(totalAmount)}</div>
           </div>
-          {/* 손님 모드는 각 메뉴 카드에 '주문하기'가 있어 하단 버튼 숨김 */}
-          {!customer && (
-            <button
-              disabled={totalCount === 0 || submitting}
-              onClick={submitOrder}
-              style={{ ...primaryBtn, width: "auto", padding: "0 28px", opacity: totalCount === 0 || submitting ? 0.45 : 1 }}
-            >
-              {submitting ? "전송 중…" : "주문하기"}
-            </button>
-          )}
+          {/* 직원·손님 모두 각 메뉴 카드에 '주문하기'가 있어 하단 버튼 숨김 */}
         </BottomBar>
         {err && step === "menu" && (
           <div style={{ padding: "0 18px 10px", color: ORDER.red, fontSize: 13 }}>{err}</div>
