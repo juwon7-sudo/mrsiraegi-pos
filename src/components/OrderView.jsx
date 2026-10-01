@@ -5,6 +5,26 @@ import { useConfirm } from "@/components/confirm";
 import { ORDER, font, serif, ALL_TABLES, TABLE_COUNT, tableLabel, PARTY_OPTIONS } from "@/lib/constants";
 import { wonLabel } from "@/lib/format";
 
+/* 주문 항목(구성품 행)을 '기본 메뉴명'으로 묶는다.
+   주문 내역/내 주문 확인은 메뉴명으로 보여주고, 구성품 상세는 주방·홀 화면에만. */
+function groupItems(items) {
+  const groups = [];
+  const index = new Map();
+  for (const it of items || []) {
+    const key = it.menu_id ?? `name:${it.menu_name || it.name}`;
+    let g = index.get(key);
+    if (!g) {
+      g = { key, menu_id: it.menu_id, name: it.menu_name || it.name, people: it.people || 0, amount: 0, rows: [] };
+      index.set(key, g);
+      groups.push(g);
+    }
+    g.amount += it.amount || 0;
+    g.people = Math.max(g.people, it.people || 0);
+    g.rows.push(it);
+  }
+  return groups;
+}
+
 /* 주문 화면 — 라이트 크림 테마, 다단계 플로우 (테이블/인원 → 메뉴 → 확인) */
 export default function OrderView({ customer = false }) {
   const [step, setStep] = useState("table"); // table | menu | confirm | history
@@ -75,6 +95,26 @@ export default function OrderView({ customer = false }) {
     const i = s.indexOf("(");
     if (i > 0) return { main: s.slice(0, i).trim(), note: s.slice(i).trim() };
     return { main: s, note: "" };
+  }
+
+  // 메뉴 1건을 인원(units)만큼 담았을 때의 출고 행들(세트=구성품별, 단품=1건).
+  // 주문 전송과 수량 재계산에서 공통으로 쓴다. {name, amount, station}
+  function menuLineParts(m, units) {
+    if (isSet(m)) {
+      const comps = m.components || [];
+      const lineAmount = m.price * units;
+      let allocated = 0;
+      return comps.map((c, idx) => {
+        const hall = c.station === "hall";
+        const per = Number(c.amount) || 0;
+        const label = per > 0 ? `${c.name} ${per * units}${c.unit || ""}` : c.name;
+        const amt = idx === comps.length - 1 ? lineAmount - allocated : Math.round(lineAmount / comps.length);
+        allocated += amt;
+        return { name: label, amount: amt, station: hall ? "hall" : "kitchen" };
+      });
+    }
+    const hall = m.station === "hall";
+    return [{ name: m.name, amount: m.price * units, station: hall ? "hall" : "kitchen" }];
   }
 
   function goMenu() {
@@ -310,21 +350,33 @@ export default function OrderView({ customer = false }) {
     }
   }
 
-  // 로컬 수량 변경(저장 전 미리보기)
-  function bumpItem(orderId, itemId, delta) {
+  // 메뉴(묶음) 단위 수량 변경(저장 전 미리보기) — 세트는 구성품 양·금액·이름까지 재계산.
+  function bumpGroup(orderId, groupKey, delta) {
     setManageOrders((prev) =>
-      prev.map((o) =>
-        o.id !== orderId
-          ? o
-          : {
-              ...o,
-              pos_order_items: o.pos_order_items.map((it) => {
-                if (it.id !== itemId) return it;
-                const next = Math.max(minForItem(it), it.people + delta);
-                return { ...it, people: next, amount: it._unit * next };
-              }),
-            }
-      )
+      prev.map((o) => {
+        if (o.id !== orderId) return o;
+        const grp = groupItems(o.pos_order_items).find((g) => g.key === groupKey);
+        if (!grp) return o;
+        const m = menu.find((x) => x.id === grp.menu_id);
+        const minP = (m && m.min_people) || 1;
+        const newP = Math.max(minP, grp.people + delta);
+        if (newP === grp.people) return o;
+        const parts = m ? menuLineParts(m, newP) : null;
+        const useParts = parts && parts.length === grp.rows.length; // 구성품 수 동일할 때만 재구성
+        const idSet = new Set(grp.rows.map((r) => r.id));
+        let ci = 0;
+        const items = o.pos_order_items.map((it) => {
+          if (!idSet.has(it.id)) return it;
+          const idx = ci++;
+          if (useParts) {
+            const p = parts[idx];
+            return { ...it, people: newP, amount: p.amount, name: p.name, station: p.station };
+          }
+          // 메뉴 정의를 못 찾으면 비례 계산(이름은 유지)
+          return { ...it, people: newP, amount: Math.round((it._unit ?? it.amount) * newP) };
+        });
+        return { ...o, pos_order_items: items };
+      })
     );
   }
 
@@ -337,7 +389,7 @@ export default function OrderView({ customer = false }) {
       for (const it of order.pos_order_items) {
         const { error } = await sb
           .from("pos_order_items")
-          .update({ people: it.people, amount: it.amount })
+          .update({ people: it.people, amount: it.amount, name: it.name, station: it.station })
           .eq("id", it.id);
         if (error) throw error;
       }
@@ -347,6 +399,32 @@ export default function OrderView({ customer = false }) {
       await openManage();
     } catch (e) {
       setErr("수정 저장에 실패했습니다.");
+    } finally {
+      setManageBusyId(null);
+    }
+  }
+
+  // 메뉴(묶음) 전체 삭제 — 그 메뉴의 구성품 행을 모두 제거
+  async function deleteGroup(order, group) {
+    if (manageBusyId) return;
+    if (!(await confirm(`${splitName(group.name).main} 메뉴를 삭제할까요?`))) return;
+    setManageBusyId(order.id);
+    setErr("");
+    try {
+      const sb = getSupabase();
+      const ids = group.rows.map((r) => r.id);
+      const { error } = await sb.from("pos_order_items").delete().in("id", ids);
+      if (error) throw error;
+      const rest = order.pos_order_items.filter((x) => !ids.includes(x.id));
+      if (rest.length === 0) {
+        await sb.from("pos_orders").delete().eq("id", order.id);
+      } else {
+        const total = rest.reduce((s, x) => s + x.amount, 0);
+        await sb.from("pos_orders").update({ total }).eq("id", order.id);
+      }
+      await openManage();
+    } catch (e) {
+      setErr("삭제에 실패했습니다.");
     } finally {
       setManageBusyId(null);
     }
@@ -585,40 +663,45 @@ export default function OrderView({ customer = false }) {
                   </button>
                 </div>
 
-                {o.pos_order_items.map((it) => (
-                  <div
-                    key={it.id}
-                    style={{ padding: "10px 0", borderTop: `1px solid ${ORDER.line}`, display: "flex", alignItems: "center", gap: 10 }}
-                  >
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 700, fontSize: 14.5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {it.name}
+                {groupItems(o.pos_order_items).map((g) => {
+                  const gm = menu.find((x) => x.id === g.menu_id);
+                  const minP = (gm && gm.min_people) || 1;
+                  return (
+                    <div
+                      key={g.key}
+                      style={{ padding: "10px 0", borderTop: `1px solid ${ORDER.line}`, display: "flex", alignItems: "center", gap: 10 }}
+                    >
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontFamily: serif, fontWeight: 700, fontSize: 15.5, wordBreak: "keep-all" }}>
+                          {splitName(g.name).main}
+                        </div>
+                        <div style={{ marginTop: 2, fontSize: 12.5, fontWeight: 700, color: ORDER.red }}>{wonLabel(g.amount)}</div>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <button
+                          onClick={() => bumpGroup(o.id, g.key, -1)}
+                          disabled={g.people <= minP}
+                          style={{ ...miniStep, background: "#F1EEE4", color: ORDER.ink, opacity: g.people <= minP ? 0.4 : 1 }}
+                        >
+                          −
+                        </button>
+                        <div style={{ width: 38, textAlign: "center", fontWeight: 700, fontSize: 15 }}>{g.people}인</div>
+                        <button
+                          onClick={() => bumpGroup(o.id, g.key, +1)}
+                          style={{ ...miniStep, background: ORDER.ink, color: "#FFF" }}
+                        >
+                          +
+                        </button>
+                        <button
+                          onClick={() => deleteGroup(o, g)}
+                          style={{ marginLeft: 4, fontSize: 12.5, fontWeight: 700, color: ORDER.muted, background: "transparent", padding: "6px 4px" }}
+                        >
+                          삭제
+                        </button>
                       </div>
                     </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <button
-                        onClick={() => bumpItem(o.id, it.id, -1)}
-                        disabled={it.people <= minForItem(it)}
-                        style={{ ...miniStep, background: "#F1EEE4", color: ORDER.ink, opacity: it.people <= minForItem(it) ? 0.4 : 1 }}
-                      >
-                        −
-                      </button>
-                      <div style={{ width: 38, textAlign: "center", fontWeight: 700, fontSize: 15 }}>{it.people}인</div>
-                      <button
-                        onClick={() => bumpItem(o.id, it.id, +1)}
-                        style={{ ...miniStep, background: ORDER.ink, color: "#FFF" }}
-                      >
-                        +
-                      </button>
-                      <button
-                        onClick={() => deleteItem(o, it)}
-                        style={{ marginLeft: 4, fontSize: 12.5, fontWeight: 700, color: ORDER.muted, background: "transparent", padding: "6px 4px" }}
-                      >
-                        삭제
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
 
                 <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 12 }}>
                   <div style={{ flex: 1, fontWeight: 700, fontSize: 14 }}>
@@ -1003,11 +1086,12 @@ export default function OrderView({ customer = false }) {
           {manageOrders.map((o, oi) => (
             <div key={o.id} style={{ ...cardBox, padding: 14, marginBottom: 12 }}>
               <div style={{ fontWeight: 700, fontSize: 13.5, color: ORDER.muted, marginBottom: 6 }}>주문 {oi + 1}</div>
-              {(o.pos_order_items || []).map((it) => (
-                <div key={it.id} style={{ display: "flex", padding: "7px 0", borderTop: `1px solid ${ORDER.line}`, fontSize: 14.5 }}>
-                  <div style={{ flex: 1 }}>
-                    {it.name} <span style={{ color: ORDER.muted }}>{it.people}인</span>
+              {groupItems(o.pos_order_items).map((g) => (
+                <div key={g.key} style={{ display: "flex", alignItems: "baseline", gap: 8, padding: "7px 0", borderTop: `1px solid ${ORDER.line}`, fontSize: 14.5 }}>
+                  <div style={{ flex: 1, fontWeight: 700, wordBreak: "keep-all" }}>
+                    {splitName(g.name).main} <span style={{ color: ORDER.muted, fontWeight: 400 }}>{g.people}인</span>
                   </div>
+                  <div style={{ color: ORDER.red, fontWeight: 700 }}>{wonLabel(g.amount)}</div>
                 </div>
               ))}
               <div style={{ display: "flex", marginTop: 8, fontWeight: 700, fontSize: 14 }}>
