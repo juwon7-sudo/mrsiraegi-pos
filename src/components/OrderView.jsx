@@ -88,18 +88,38 @@ export default function OrderView({ customer = false }) {
     setStep("menu");
   }
 
-  function addItem(item) {
-    // 단독 주문 규칙: 가을 평일특선 등은 다른 메뉴와 함께 담을 수 없음
+  async function addItem(item) {
+    const amt = Math.max(item.min_people, people || item.min_people);
+
+    // 단독 주문 규칙: '가을 평일특선' 등(이름에 "병행주문 불가")은 다른 메뉴와 합산 주문 불가.
+    // 어느 쪽을 먼저 담았든, 담으려 하면 안내 후 '비우고 이 메뉴만 담기'를 선택할 수 있다.
     if (isExclusive(item) && selected.length > 0) {
-      setErr(`${splitName(item.name).main}은(는) 다른 메뉴와 함께 주문할 수 없습니다. 담은 메뉴를 먼저 주문하거나 취소해 주세요.`);
+      const ok = await confirm(
+        `'${splitName(item.name).main}'은(는) 다른 메뉴와 함께 주문할 수 없어요.\n담은 메뉴를 비우고 이 메뉴만 담을까요?`
+      );
+      if (!ok) return;
+      setErr("");
+      setQty({ [item.id]: amt }); // 전부 비우고 단독 메뉴만
       return;
     }
     if (!isExclusive(item) && selected.some(isExclusive)) {
-      setErr("단독 주문 메뉴가 담겨 있어 다른 메뉴를 함께 담을 수 없습니다.");
+      const ex = selected.find(isExclusive);
+      const ok = await confirm(
+        `'${splitName(ex.name).main}'은(는) 단독 주문 메뉴예요.\n그 메뉴를 비우고 '${splitName(item.name).main}'을(를) 담을까요?`
+      );
+      if (!ok) return;
+      setErr("");
+      setQty((q) => {
+        const n = { ...q };
+        selected.filter(isExclusive).forEach((e) => delete n[e.id]); // 단독 메뉴 비우기
+        n[item.id] = amt;
+        return n;
+      });
       return;
     }
+
     setErr("");
-    setQty((q) => ({ ...q, [item.id]: Math.max(item.min_people, people || item.min_people) }));
+    setQty((q) => ({ ...q, [item.id]: amt }));
   }
   // 담은 메뉴를 바로 취소(장바구니에서 제거) → '담기' 상태로 되돌림
   function removeItem(item) {
@@ -614,11 +634,6 @@ export default function OrderView({ customer = false }) {
     const cnt = qty[m.id] || m.min_people;
     const img = menuImageUrl(m.image_path);
     const { main, note } = splitName(m.name);
-    // 단독 주문 메뉴/다른 메뉴가 담겨 있어 담기가 막히는 상태
-    const blocked =
-      !added &&
-      ((isExclusive(m) && selected.length > 0) ||
-        (!isExclusive(m) && selected.some(isExclusive)));
     return (
       <div
         key={m.id}
@@ -634,20 +649,20 @@ export default function OrderView({ customer = false }) {
           {added && <div style={{ ...addedBadge, top: 10, left: 10, fontSize: 12, padding: "4px 10px" }}>{cnt}인</div>}
         </div>
 
-        {/* 메뉴명 (가운데) — 괄호 설명은 줄바꿈 + 작게 */}
+        {/* 메뉴명 (가운데, 크고 진하게) — 괄호 설명은 줄바꿈 + 작게 */}
         <div style={{ textAlign: "center", marginTop: 14 }}>
-          <div style={{ fontFamily: serif, fontWeight: 700, fontSize: 26, lineHeight: 1.3, wordBreak: "keep-all" }}>
+          <div style={{ fontFamily: serif, fontWeight: 800, fontSize: 31, lineHeight: 1.3, wordBreak: "keep-all" }}>
             {main}
           </div>
           {note && (
-            <div style={{ fontFamily: serif, fontWeight: 400, fontSize: 23, lineHeight: 1.3, color: ORDER.muted, marginTop: 6, wordBreak: "keep-all" }}>
+            <div style={{ fontFamily: serif, fontWeight: 400, fontSize: 28, lineHeight: 1.3, color: ORDER.muted, marginTop: 6, wordBreak: "keep-all" }}>
               {note}
             </div>
           )}
         </div>
 
         {/* 가격 (가운데) */}
-        <div style={{ textAlign: "center", fontFamily: serif, fontSize: 18, fontWeight: 700, marginTop: 5 }}>
+        <div style={{ textAlign: "center", fontFamily: serif, fontSize: 22, fontWeight: 700, marginTop: 6 }}>
           {cnt}인 <span style={{ color: ORDER.red }}>{wonLabel(m.price * cnt)}</span>
         </div>
 
@@ -663,10 +678,9 @@ export default function OrderView({ customer = false }) {
           {!added ? (
             <button
               onClick={() => addItem(m)}
-              disabled={blocked}
-              style={{ ...primaryBtn, padding: "15px 0", minHeight: 54, fontSize: 17, opacity: blocked ? 0.4 : 1 }}
+              style={{ ...primaryBtn, padding: "15px 0", minHeight: 54, fontSize: 17 }}
             >
-              {blocked ? (isExclusive(m) ? "단독 주문 메뉴" : "함께 담을 수 없음") : "담기"}
+              담기
             </button>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -762,6 +776,7 @@ export default function OrderView({ customer = false }) {
         {err && step === "menu" && (
           <div style={{ padding: "0 18px 10px", color: ORDER.red, fontSize: 13 }}>{err}</div>
         )}
+        {confirmModal}
       </div>
     );
   }
