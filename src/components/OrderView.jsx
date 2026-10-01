@@ -588,7 +588,7 @@ export default function OrderView({ customer = false }) {
     );
   }
 
-  // 메뉴 카드 하나 렌더 (가로형 컴팩트 — 한 화면에 여러 개 보이게)
+  // 메뉴 카드 하나 렌더 (세로형 — 큰 사진 위, 이름·설명·수량·버튼 가운데)
   function renderCard(m) {
     const added = qty[m.id] != null;
     const cnt = qty[m.id] || m.min_people;
@@ -596,47 +596,48 @@ export default function OrderView({ customer = false }) {
     return (
       <div
         key={m.id}
-        style={{ ...cardBox, border: `2px solid ${added ? ORDER.red : ORDER.line}`, marginBottom: 10, padding: 10 }}
+        style={{ ...cardBox, border: `2px solid ${added ? ORDER.red : ORDER.line}`, marginBottom: 16, padding: 14 }}
       >
-        {/* 상단: 사진(크게, 가로) + 오른쪽 이름·가격·담기 */}
-        <div style={{ display: "flex", gap: 12 }}>
-          <div style={{ position: "relative", width: 168, height: 124, borderRadius: 12, overflow: "hidden", flexShrink: 0, background: "linear-gradient(135deg,#8A5A3B 0%,#6E4126 60%,#4E2E1A 100%)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            {img ? (
-              <img src={img} alt={m.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-            ) : (
-              <span style={{ fontFamily: serif, fontWeight: 700, fontSize: 13, color: "#FFF9EC", textAlign: "center", padding: 4 }}>{m.name}</span>
-            )}
-            {added && <div style={{ ...addedBadge, top: 6, left: 6, fontSize: 10, padding: "3px 7px" }}>{cnt}인</div>}
-          </div>
-
-          <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
-            <div style={{ fontFamily: serif, fontWeight: 700, fontSize: 19, lineHeight: 1.25, wordBreak: "keep-all" }}>{m.name}</div>
-            <div style={{ marginTop: 6, fontFamily: serif, fontSize: 17, fontWeight: 700 }}>
-              {cnt}인 <span style={{ color: ORDER.red }}>{wonLabel(m.price * cnt)}</span>
-            </div>
-          </div>
+        {/* 큰 사진 (위, 전체폭) */}
+        <div style={{ position: "relative", width: "100%", aspectRatio: "4 / 3", borderRadius: 14, overflow: "hidden", background: "linear-gradient(135deg,#8A5A3B 0%,#6E4126 60%,#4E2E1A 100%)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          {img ? (
+            <img src={img} alt={m.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          ) : (
+            <span style={{ fontFamily: serif, fontWeight: 700, fontSize: 18, color: "#FFF9EC", textAlign: "center", padding: 8 }}>{m.name}</span>
+          )}
+          {added && <div style={{ ...addedBadge, top: 10, left: 10, fontSize: 12, padding: "4px 10px" }}>{cnt}인</div>}
         </div>
 
-        {/* 사진 아래: 설명 */}
+        {/* 메뉴명 (가운데) */}
+        <div style={{ textAlign: "center", fontFamily: serif, fontWeight: 700, fontSize: 22, lineHeight: 1.3, marginTop: 14, wordBreak: "keep-all" }}>
+          {m.name}
+        </div>
+
+        {/* 가격 (가운데) */}
+        <div style={{ textAlign: "center", fontFamily: serif, fontSize: 18, fontWeight: 700, marginTop: 5 }}>
+          {cnt}인 <span style={{ color: ORDER.red }}>{wonLabel(m.price * cnt)}</span>
+        </div>
+
+        {/* 설명 (가운데) */}
         {m.description && (
-          <div style={{ color: ORDER.muted, fontSize: 12.5, lineHeight: 1.6, marginTop: 10, whiteSpace: "pre-line" }}>
+          <div style={{ textAlign: "center", color: ORDER.muted, fontSize: 13, lineHeight: 1.6, marginTop: 8, whiteSpace: "pre-line", wordBreak: "keep-all" }}>
             {m.description.trim()}
           </div>
         )}
 
-        {/* 담기 / 수량·취소 — 전체폭, 아래로 */}
-        <div style={{ marginTop: 12 }}>
+        {/* 수량 · 주문 버튼 */}
+        <div style={{ marginTop: 16 }}>
           {!added ? (
             <button
               onClick={() => addItem(m)}
-              style={{ ...primaryBtn, padding: "12px 0", minHeight: 46, fontSize: 15 }}
+              style={{ ...primaryBtn, padding: "15px 0", minHeight: 54, fontSize: 17 }}
             >
               담기
             </button>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {/* − 수량 + 한 줄 */}
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {/* − 수량 + (가운데) */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 20 }}>
                 <button
                   onClick={() => stepQty(m, -1)}
                   disabled={cnt <= unitMin(m)}
@@ -644,25 +645,25 @@ export default function OrderView({ customer = false }) {
                 >
                   −
                 </button>
-                <div style={{ flex: 1, textAlign: "center", fontWeight: 700, fontSize: 17 }}>{cnt}인</div>
+                <div style={{ minWidth: 56, textAlign: "center", fontWeight: 700, fontSize: 19 }}>{cnt}인</div>
                 <button onClick={() => stepQty(m, +1)} style={{ ...stepBtn, background: ORDER.ink, color: "#FFF" }}>
                   +
                 </button>
               </div>
-              {/* 주문하기(크게) + 주문 취소 — 직원·손님 화면 동일 */}
-              <div style={{ display: "flex", gap: 8 }}>
+              {/* 주문하기(크게) + 주문취소(작게) */}
+              <div style={{ display: "flex", alignItems: "stretch", gap: 10 }}>
                 <button
                   onClick={submitOrder}
                   disabled={submitting || selected.length === 0}
-                  style={{ flex: 2, padding: "15px 0", borderRadius: 12, background: ORDER.red, color: "#FFF", fontWeight: 700, fontSize: 18, minHeight: 58, opacity: submitting || selected.length === 0 ? 0.5 : 1, whiteSpace: "nowrap" }}
+                  style={{ flex: 3, padding: "18px 0", borderRadius: 14, background: ORDER.red, color: "#FFF", fontWeight: 700, fontSize: 22, minHeight: 64, opacity: submitting || selected.length === 0 ? 0.5 : 1, whiteSpace: "nowrap" }}
                 >
                   {submitting ? "전송 중…" : "주문하기"}
                 </button>
                 <button
                   onClick={() => removeItem(m)}
-                  style={{ flex: 1, padding: "13px 0", borderRadius: 12, background: "#FBEAE8", color: ORDER.red, fontWeight: 700, fontSize: 14, minHeight: 58, whiteSpace: "nowrap" }}
+                  style={{ flex: 1, padding: "12px 0", borderRadius: 14, background: "#FBEAE8", color: ORDER.red, fontWeight: 700, fontSize: 14, minHeight: 64, whiteSpace: "nowrap" }}
                 >
-                  주문 취소
+                  주문취소
                 </button>
               </div>
             </div>
