@@ -223,6 +223,32 @@ export default function OrderView({ customer = false }) {
     setErr("");
     try {
       const sb = getSupabase();
+
+      // 테이블 단위 단독주문 검사: 이미 들어간 주문과 '병행주문 불가' 충돌 방지(추가 주문 포함)
+      const { data: existing } = await sb
+        .from("pos_orders")
+        .select("id, pos_order_items(menu_name)")
+        .eq("table_no", tableNo)
+        .neq("status", "done");
+      const exItems = (existing || []).flatMap((o) => o.pos_order_items || []);
+      const exHasExclusive = exItems.some((it) => isExclusive({ name: it.menu_name }));
+      const cartHasExclusive = selected.some(isExclusive);
+      const cartHasOther = selected.some((m) => !isExclusive(m));
+      if (cartHasExclusive && exItems.length > 0) {
+        setSubmitting(false);
+        await confirm(
+          "이 테이블에 이미 주문이 있어 '가을 평일특선'은 단독으로만 주문할 수 있어요.\n(기존 주문을 비운 뒤 주문해 주세요)"
+        );
+        return;
+      }
+      if (cartHasOther && exHasExclusive) {
+        setSubmitting(false);
+        await confirm(
+          "이 테이블은 단독 주문 메뉴('가을 평일특선')가 주문되어 있어\n다른 메뉴를 추가 주문할 수 없어요."
+        );
+        return;
+      }
+
       const { data: order, error: oErr } = await sb
         .from("pos_orders")
         .insert({ table_no: tableNo, people, status: "cooking", total: totalAmount })
