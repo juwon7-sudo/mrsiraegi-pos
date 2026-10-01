@@ -65,6 +65,16 @@ export default function OrderView({ customer = false }) {
   const isSet = (m) => Array.isArray(m.components) && m.components.length > 0;
   const unitMin = (m) => m.min_people || 1;
 
+  // 단독 주문 메뉴(이름에 "병행주문 불가" 포함) — 다른 메뉴와 합산 주문 불가
+  const isExclusive = (m) => /병행\s*주문\s*불가/.test(m?.name || "");
+  // 메뉴명에서 괄호 설명을 분리(화면에서 줄바꿈 처리)
+  function splitName(name) {
+    const s = (name || "").trim();
+    const i = s.indexOf("(");
+    if (i > 0) return { main: s.slice(0, i).trim(), note: s.slice(i).trim() };
+    return { main: s, note: "" };
+  }
+
   function goMenu() {
     if (!canProceed) return;
     // 해당 인원에 맞는 메뉴가 딱 1개면 담기 과정 없이 바로 − 수량 + 스텝퍼 표시.
@@ -79,6 +89,16 @@ export default function OrderView({ customer = false }) {
   }
 
   function addItem(item) {
+    // 단독 주문 규칙: 가을 평일특선 등은 다른 메뉴와 함께 담을 수 없음
+    if (isExclusive(item) && selected.length > 0) {
+      setErr(`${splitName(item.name).main}은(는) 다른 메뉴와 함께 주문할 수 없습니다. 담은 메뉴를 먼저 주문하거나 취소해 주세요.`);
+      return;
+    }
+    if (!isExclusive(item) && selected.some(isExclusive)) {
+      setErr("단독 주문 메뉴가 담겨 있어 다른 메뉴를 함께 담을 수 없습니다.");
+      return;
+    }
+    setErr("");
     setQty((q) => ({ ...q, [item.id]: Math.max(item.min_people, people || item.min_people) }));
   }
   // 담은 메뉴를 바로 취소(장바구니에서 제거) → '담기' 상태로 되돌림
@@ -593,6 +613,12 @@ export default function OrderView({ customer = false }) {
     const added = qty[m.id] != null;
     const cnt = qty[m.id] || m.min_people;
     const img = menuImageUrl(m.image_path);
+    const { main, note } = splitName(m.name);
+    // 단독 주문 메뉴/다른 메뉴가 담겨 있어 담기가 막히는 상태
+    const blocked =
+      !added &&
+      ((isExclusive(m) && selected.length > 0) ||
+        (!isExclusive(m) && selected.some(isExclusive)));
     return (
       <div
         key={m.id}
@@ -608,9 +634,16 @@ export default function OrderView({ customer = false }) {
           {added && <div style={{ ...addedBadge, top: 10, left: 10, fontSize: 12, padding: "4px 10px" }}>{cnt}인</div>}
         </div>
 
-        {/* 메뉴명 (가운데) */}
-        <div style={{ textAlign: "center", fontFamily: serif, fontWeight: 700, fontSize: 22, lineHeight: 1.3, marginTop: 14, wordBreak: "keep-all" }}>
-          {m.name}
+        {/* 메뉴명 (가운데) — 괄호 설명은 줄바꿈 + 작게 */}
+        <div style={{ textAlign: "center", marginTop: 14 }}>
+          <div style={{ fontFamily: serif, fontWeight: 700, fontSize: 26, lineHeight: 1.3, wordBreak: "keep-all" }}>
+            {main}
+          </div>
+          {note && (
+            <div style={{ fontFamily: serif, fontWeight: 400, fontSize: 23, lineHeight: 1.3, color: ORDER.muted, marginTop: 6, wordBreak: "keep-all" }}>
+              {note}
+            </div>
+          )}
         </div>
 
         {/* 가격 (가운데) */}
@@ -630,9 +663,10 @@ export default function OrderView({ customer = false }) {
           {!added ? (
             <button
               onClick={() => addItem(m)}
-              style={{ ...primaryBtn, padding: "15px 0", minHeight: 54, fontSize: 17 }}
+              disabled={blocked}
+              style={{ ...primaryBtn, padding: "15px 0", minHeight: 54, fontSize: 17, opacity: blocked ? 0.4 : 1 }}
             >
-              담기
+              {blocked ? (isExclusive(m) ? "단독 주문 메뉴" : "함께 담을 수 없음") : "담기"}
             </button>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
