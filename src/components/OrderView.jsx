@@ -655,7 +655,7 @@ export default function OrderView({ customer = false }) {
             {main}
           </div>
           {note && (
-            <div style={{ fontFamily: serif, fontWeight: 400, fontSize: 28, lineHeight: 1.3, color: ORDER.muted, marginTop: 6, wordBreak: "keep-all" }}>
+            <div style={{ fontFamily: serif, fontWeight: 400, fontSize: 14, lineHeight: 1.3, color: ORDER.muted, marginTop: 6, whiteSpace: "nowrap" }}>
               {note}
             </div>
           )}
@@ -673,7 +673,7 @@ export default function OrderView({ customer = false }) {
           </div>
         )}
 
-        {/* 수량 · 주문 버튼 */}
+        {/* 수량 · 담기/빼기 — 주문은 하단 장바구니에서 */}
         <div style={{ marginTop: 16 }}>
           {!added ? (
             <button
@@ -698,22 +698,13 @@ export default function OrderView({ customer = false }) {
                   +
                 </button>
               </div>
-              {/* 주문하기(크게) + 주문취소(작게) */}
-              <div style={{ display: "flex", alignItems: "stretch", gap: 10 }}>
-                <button
-                  onClick={submitOrder}
-                  disabled={submitting || selected.length === 0}
-                  style={{ flex: 3, padding: "18px 0", borderRadius: 14, background: ORDER.red, color: "#FFF", fontWeight: 700, fontSize: 22, minHeight: 64, opacity: submitting || selected.length === 0 ? 0.5 : 1, whiteSpace: "nowrap" }}
-                >
-                  {submitting ? "전송 중…" : "주문하기"}
-                </button>
-                <button
-                  onClick={() => removeItem(m)}
-                  style={{ flex: 1, padding: "12px 0", borderRadius: 14, background: "#FBEAE8", color: ORDER.red, fontWeight: 700, fontSize: 14, minHeight: 64, whiteSpace: "nowrap" }}
-                >
-                  주문취소
-                </button>
-              </div>
+              {/* 장바구니에서 빼기 */}
+              <button
+                onClick={() => removeItem(m)}
+                style={{ width: "100%", padding: "13px 0", borderRadius: 14, background: "#FBEAE8", color: ORDER.red, fontWeight: 700, fontSize: 15, minHeight: 50 }}
+              >
+                빼기
+              </button>
             </div>
           )}
         </div>
@@ -768,14 +759,103 @@ export default function OrderView({ customer = false }) {
 
         <BottomBar>
           <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 700, fontSize: 15 }}>{totalCount}개 메뉴</div>
+            <div style={{ fontWeight: 700, fontSize: 15 }}>장바구니 {totalCount}개</div>
             <div style={{ color: ORDER.muted, fontSize: 13 }}>{wonLabel(totalAmount)}</div>
           </div>
-          {/* 직원·손님 모두 각 메뉴 카드에 '주문하기'가 있어 하단 버튼 숨김 */}
+          <button
+            disabled={totalCount === 0}
+            onClick={() => { setErr(""); setStep("cart"); }}
+            style={{ ...primaryBtn, width: "auto", padding: "0 30px", fontSize: 17, opacity: totalCount === 0 ? 0.45 : 1 }}
+          >
+            주문하기
+          </button>
         </BottomBar>
         {err && step === "menu" && (
           <div style={{ padding: "0 18px 10px", color: ORDER.red, fontSize: 13 }}>{err}</div>
         )}
+        {confirmModal}
+      </div>
+    );
+  }
+
+  // ========== STEP: 장바구니 (주문 확인) ==========
+  if (step === "cart") {
+    return (
+      <div style={wrap}>
+        <div style={topRow}>
+          <button onClick={() => setStep("menu")} style={{ ...pill, fontWeight: 700 }}>
+            ← 메뉴 더 담기
+          </button>
+          <div style={{ flex: 1 }} />
+          <div style={{ color: ORDER.red, fontWeight: 700 }}>{tableLabel(tableNo)}</div>
+        </div>
+
+        <div className="app-scroll" style={{ flex: 1, overflowY: "auto", padding: "8px 18px 20px" }}>
+          <div style={{ fontFamily: serif, fontWeight: 700, fontSize: 20, margin: "6px 0 10px" }}>장바구니</div>
+
+          {selected.length === 0 && (
+            <div style={{ color: ORDER.muted, textAlign: "center", marginTop: 50, fontSize: 14 }}>
+              담은 메뉴가 없습니다. 메뉴에서 담아주세요.
+            </div>
+          )}
+
+          {selected.map((m) => {
+            const cnt = qty[m.id] || m.min_people;
+            const { main } = splitName(m.name);
+            return (
+              <div key={m.id} style={{ ...cardBox, padding: 14, marginBottom: 12 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontFamily: serif, fontWeight: 700, fontSize: 17, wordBreak: "keep-all" }}>{main}</div>
+                    <div style={{ marginTop: 4, fontSize: 14, fontWeight: 700, color: ORDER.red }}>
+                      {wonLabel(m.price * cnt)}
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <button
+                      onClick={() => stepQty(m, -1)}
+                      disabled={cnt <= unitMin(m)}
+                      style={{ ...miniStep, background: "#F1EEE4", color: ORDER.ink, opacity: cnt <= unitMin(m) ? 0.4 : 1 }}
+                    >
+                      −
+                    </button>
+                    <div style={{ width: 42, textAlign: "center", fontWeight: 700, fontSize: 15 }}>{cnt}인</div>
+                    <button onClick={() => stepQty(m, +1)} style={{ ...miniStep, background: ORDER.ink, color: "#FFF" }}>
+                      +
+                    </button>
+                    <button
+                      onClick={() => removeItem(m)}
+                      style={{ marginLeft: 4, fontSize: 12.5, fontWeight: 700, color: ORDER.muted, background: "transparent", padding: "6px 4px" }}
+                    >
+                      빼기
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+
+          {selected.length > 0 && (
+            <div style={{ ...cardBox, padding: 14, background: "#FBF8F1", display: "flex", alignItems: "center", marginTop: 4 }}>
+              <div style={{ flex: 1, fontWeight: 700, fontSize: 15 }}>합계</div>
+              <div style={{ fontWeight: 700, fontSize: 19, color: ORDER.red }}>{wonLabel(totalAmount)}</div>
+            </div>
+          )}
+          {err && <div style={{ color: ORDER.red, fontSize: 13, marginTop: 10 }}>{err}</div>}
+        </div>
+
+        <BottomBar>
+          <button onClick={() => setStep("menu")} style={{ ...lightBtn, flex: 1 }}>
+            더 담기
+          </button>
+          <button
+            onClick={submitOrder}
+            disabled={submitting || selected.length === 0}
+            style={{ ...primaryBtn, flex: 2, fontSize: 18, opacity: submitting || selected.length === 0 ? 0.5 : 1 }}
+          >
+            {submitting ? "전송 중…" : `주문하기 (${totalCount})`}
+          </button>
+        </BottomBar>
         {confirmModal}
       </div>
     );
