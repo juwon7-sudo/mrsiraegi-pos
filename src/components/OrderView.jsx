@@ -15,8 +15,10 @@ export default function OrderView({ customer = false }) {
   const [err, setErr] = useState("");
   const [tablePicker, setTablePicker] = useState(false);
 
-  // 담긴 수량: { [menuId]: peopleCount }
+  // 장바구니(담긴) 수량: { [menuId]: peopleCount }
   const [qty, setQty] = useState({});
+  // 담기 눌러 인분 고르는 중(장바구니 담기 전): { [menuId]: peopleCount }
+  const [draft, setDraft] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [lastItems, setLastItems] = useState([]);
 
@@ -85,14 +87,38 @@ export default function OrderView({ customer = false }) {
       init[m.id] = Math.max(m.min_people || 1, people || 1);
     }
     setQty(init);
+    setDraft({});
     setStep("menu");
   }
 
-  async function addItem(item) {
-    const amt = Math.max(item.min_people, people || item.min_people);
+  // 1) '담기' → 인분 고르기 시작(아직 장바구니 아님)
+  function startPick(item) {
+    setErr("");
+    setDraft((d) => ({ ...d, [item.id]: Math.max(item.min_people, people || item.min_people) }));
+  }
+  // 인분 고르는 중 수량 조절
+  function stepDraft(item, delta) {
+    setDraft((d) => {
+      const cur = d[item.id];
+      if (cur == null) return d;
+      const next = cur + delta;
+      if (next < unitMin(item)) return d;
+      return { ...d, [item.id]: next };
+    });
+  }
+  // 인분 고르기 취소
+  function cancelPick(item) {
+    setDraft((d) => {
+      const n = { ...d };
+      delete n[item.id];
+      return n;
+    });
+  }
+  // 2) '장바구니 담기' → 고른 인분으로 장바구니에 담는다
+  async function addToCart(item) {
+    const amt = draft[item.id] ?? Math.max(item.min_people, people || item.min_people);
 
     // 단독 주문 규칙: '가을 평일특선' 등(이름에 "병행주문 불가")은 다른 메뉴와 합산 주문 불가.
-    // 어느 쪽을 먼저 담았든, 담으려 하면 안내 후 '비우고 이 메뉴만 담기'를 선택할 수 있다.
     if (isExclusive(item) && selected.length > 0) {
       const ok = await confirm(
         `'${splitName(item.name).main}'은(는) 다른 메뉴와 함께 주문할 수 없어요.\n담은 메뉴를 비우고 이 메뉴만 담을까요?`
@@ -100,6 +126,7 @@ export default function OrderView({ customer = false }) {
       if (!ok) return;
       setErr("");
       setQty({ [item.id]: amt }); // 전부 비우고 단독 메뉴만
+      cancelPick(item);
       return;
     }
     if (!isExclusive(item) && selected.some(isExclusive)) {
@@ -115,11 +142,13 @@ export default function OrderView({ customer = false }) {
         n[item.id] = amt;
         return n;
       });
+      cancelPick(item);
       return;
     }
 
     setErr("");
     setQty((q) => ({ ...q, [item.id]: amt }));
+    cancelPick(item);
   }
   // 담은 메뉴를 바로 취소(장바구니에서 제거) → '담기' 상태로 되돌림
   function removeItem(item) {
@@ -215,6 +244,7 @@ export default function OrderView({ customer = false }) {
 
       setLastItems(rows);
       setQty({});
+      setDraft({});
       setStep("confirm");
     } catch (e) {
       setErr("주문 전송에 실패했습니다. 다시 시도해 주세요.");
@@ -630,14 +660,15 @@ export default function OrderView({ customer = false }) {
 
   // 메뉴 카드 하나 렌더 (세로형 — 큰 사진 위, 이름·설명·수량·버튼 가운데)
   function renderCard(m) {
-    const added = qty[m.id] != null;
-    const cnt = qty[m.id] || m.min_people;
+    const inCart = qty[m.id] != null; // 장바구니에 담김
+    const inDraft = !inCart && draft[m.id] != null; // 인분 고르는 중
+    const cnt = inCart ? qty[m.id] : draft[m.id] || m.min_people;
     const img = menuImageUrl(m.image_path);
     const { main, note } = splitName(m.name);
     return (
       <div
         key={m.id}
-        style={{ ...cardBox, border: `2px solid ${added ? ORDER.red : ORDER.line}`, marginBottom: 16, padding: 14 }}
+        style={{ ...cardBox, border: `2px solid ${inCart ? ORDER.red : inDraft ? "#C9A24B" : ORDER.line}`, marginBottom: 16, padding: 14 }}
       >
         {/* 큰 사진 (위, 전체폭) */}
         <div style={{ position: "relative", width: "100%", aspectRatio: "4 / 3", borderRadius: 14, overflow: "hidden", background: "linear-gradient(135deg,#8A5A3B 0%,#6E4126 60%,#4E2E1A 100%)", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -646,7 +677,7 @@ export default function OrderView({ customer = false }) {
           ) : (
             <span style={{ fontFamily: serif, fontWeight: 700, fontSize: 18, color: "#FFF9EC", textAlign: "center", padding: 8 }}>{m.name}</span>
           )}
-          {added && <div style={{ ...addedBadge, top: 10, left: 10, fontSize: 12, padding: "4px 10px" }}>{cnt}인</div>}
+          {inCart && <div style={{ ...addedBadge, top: 10, left: 10, fontSize: 12, padding: "4px 10px" }}>{cnt}인</div>}
         </div>
 
         {/* 메뉴명 (가운데, 크고 진하게) — 괄호 설명은 줄바꿈 + 작게 */}
@@ -673,39 +704,58 @@ export default function OrderView({ customer = false }) {
           </div>
         )}
 
-        {/* 수량 · 담기/빼기 — 주문은 하단 장바구니에서 */}
+        {/* 담기 → 인분 선택 → 장바구니 담기 (주문은 하단 장바구니에서 한 번에) */}
         <div style={{ marginTop: 16 }}>
-          {!added ? (
-            <button
-              onClick={() => addItem(m)}
-              style={{ ...primaryBtn, padding: "15px 0", minHeight: 54, fontSize: 17 }}
-            >
-              담기
-            </button>
-          ) : (
+          {inCart ? (
+            /* 담김 상태 + 빼기 */
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 16 }}>
+              <span style={{ color: "#2E8B57", fontWeight: 700, fontSize: 16 }}>✓ 장바구니에 담음 ({cnt}인)</span>
+              <button
+                onClick={() => removeItem(m)}
+                style={{ fontSize: 13.5, fontWeight: 700, color: ORDER.muted, background: "transparent", textDecoration: "underline", padding: "4px 2px" }}
+              >
+                빼기
+              </button>
+            </div>
+          ) : inDraft ? (
+            /* 인분 선택 + 장바구니 담기 */
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              {/* − 수량 + (가운데) */}
               <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 20 }}>
                 <button
-                  onClick={() => stepQty(m, -1)}
+                  onClick={() => stepDraft(m, -1)}
                   disabled={cnt <= unitMin(m)}
                   style={{ ...stepBtn, background: "#F1EEE4", color: ORDER.ink, opacity: cnt <= unitMin(m) ? 0.4 : 1 }}
                 >
                   −
                 </button>
                 <div style={{ minWidth: 56, textAlign: "center", fontWeight: 700, fontSize: 19 }}>{cnt}인</div>
-                <button onClick={() => stepQty(m, +1)} style={{ ...stepBtn, background: ORDER.ink, color: "#FFF" }}>
+                <button onClick={() => stepDraft(m, +1)} style={{ ...stepBtn, background: ORDER.ink, color: "#FFF" }}>
                   +
                 </button>
               </div>
-              {/* 장바구니에서 빼기 */}
-              <button
-                onClick={() => removeItem(m)}
-                style={{ width: "100%", padding: "13px 0", borderRadius: 14, background: "#FBEAE8", color: ORDER.red, fontWeight: 700, fontSize: 15, minHeight: 50 }}
-              >
-                빼기
-              </button>
+              <div style={{ display: "flex", gap: 10 }}>
+                <button
+                  onClick={() => addToCart(m)}
+                  style={{ flex: 3, padding: "16px 0", borderRadius: 14, background: ORDER.red, color: "#FFF", fontWeight: 700, fontSize: 18, minHeight: 56 }}
+                >
+                  장바구니 담기
+                </button>
+                <button
+                  onClick={() => cancelPick(m)}
+                  style={{ flex: 1, padding: "12px 0", borderRadius: 14, background: "#FFF", color: ORDER.muted, border: `1px solid ${ORDER.line}`, fontWeight: 700, fontSize: 14, minHeight: 56 }}
+                >
+                  취소
+                </button>
+              </div>
             </div>
+          ) : (
+            /* 담기 */
+            <button
+              onClick={() => startPick(m)}
+              style={{ ...primaryBtn, padding: "15px 0", minHeight: 54, fontSize: 17 }}
+            >
+              담기
+            </button>
           )}
         </div>
       </div>
