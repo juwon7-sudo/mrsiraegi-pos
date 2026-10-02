@@ -11,10 +11,13 @@ export default function Home() {
   const [tab, setTab] = useState("order");
   // 손님용 모드: QR(?table=N)로 접속하면 주문만 가능(탭 숨김·테이블 고정)
   const [customer, setCustomer] = useState(false);
+  // 일반 직원용(?staff): 관리 탭 숨김 — 주문·주방·카운터만
+  const [hideManage, setHideManage] = useState(false);
   useEffect(() => {
     try {
       const p = new URLSearchParams(window.location.search);
       if (p.get("table") || p.get("t")) setCustomer(true);
+      if (p.has("staff") || p.get("role") === "staff") setHideManage(true);
     } catch {}
   }, []);
 
@@ -41,12 +44,12 @@ export default function Home() {
           </div>
         ) : (
           <>
-            <TopTabs active={tab} onChange={setTab} />
+            <TopTabs active={tab} onChange={setTab} hideManage={hideManage} />
             <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
               {tab === "order" && <OrderView />}
               {tab === "kitchen" && <KitchenView />}
               {tab === "counter" && <CounterView />}
-              {tab === "manage" && <ManageView />}
+              {tab === "manage" && !hideManage && <ManageView />}
             </div>
           </>
         )}

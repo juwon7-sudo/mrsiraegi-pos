@@ -8,7 +8,8 @@ const TABS = [
   { key: "manage", label: "관리" },
 ];
 
-export default function TopTabs({ active, onChange }) {
+export default function TopTabs({ active, onChange, hideManage = false }) {
+  const tabs = hideManage ? TABS.filter((t) => t.key !== "manage") : TABS;
   return (
     <div
       style={{
@@ -20,7 +21,7 @@ export default function TopTabs({ active, onChange }) {
         justifyContent: "center",
       }}
     >
-      {TABS.map((t) => {
+      {tabs.map((t) => {
         const on = t.key === active;
         return (
           <button
