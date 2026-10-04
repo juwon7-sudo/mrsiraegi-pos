@@ -994,14 +994,16 @@ export default function OrderView({ customer = false }) {
             );
           })}
 
-          {selected.length > 0 && (
-            <div style={{ ...cardBox, padding: 14, background: "#FBF8F1", display: "flex", alignItems: "center", marginTop: 4 }}>
-              <div style={{ flex: 1, fontWeight: 700, fontSize: 15 }}>합계</div>
-              <div style={{ fontWeight: 700, fontSize: 19, color: ORDER.red }}>{wonLabel(totalAmount)}</div>
-            </div>
-          )}
           {err && <div style={{ color: ORDER.red, fontSize: 13, marginTop: 10 }}>{err}</div>}
         </div>
+
+        {/* 하단 고정 합계 — 스크롤해도 항상 보임 */}
+        {selected.length > 0 && (
+          <div style={{ flex: "0 0 auto", display: "flex", alignItems: "center", padding: "12px 18px 2px", background: ORDER.bg }}>
+            <div style={{ flex: 1, fontWeight: 700, fontSize: 16 }}>합계</div>
+            <div style={{ fontWeight: 800, fontSize: 22, color: ORDER.red }}>{wonLabel(totalAmount)}</div>
+          </div>
+        )}
 
         <BottomBar>
           <button onClick={() => setStep("menu")} style={{ ...lightBtn, flex: 1 }}>
