@@ -207,6 +207,11 @@ export default function OrderView({ customer = false }) {
       return { ...q, [item.id]: next };
     });
   }
+  // 추천(업셀) 카드에서 바로 장바구니에 담기(1인/최소 인원)
+  function quickAdd(item) {
+    setErr("");
+    setQty((q) => ({ ...q, [item.id]: item.min_people || 1 }));
+  }
 
   // 담긴 메뉴(한상·단품 통합)
   const selected = useMemo(
@@ -993,6 +998,45 @@ export default function OrderView({ customer = false }) {
               </div>
             );
           })}
+
+          {/* 추천(업셀) — 장바구니와 합계 사이. 담지 않은 단품 메뉴를 "추가해 보세요"로 권유 */}
+          {selected.length > 0 && !selected.some(isExclusive) && (() => {
+            const recs = menu
+              .filter((m) => (m.min_people || 1) === 1 && qty[m.id] == null && !isExclusive(m))
+              .slice(0, 3);
+            if (recs.length === 0) return null;
+            return (
+              <div style={{ marginTop: 10 }}>
+                <div style={{ fontFamily: serif, fontWeight: 700, fontSize: 15, color: ORDER.ink, margin: "2px 2px 8px" }}>
+                  이런 메뉴는 어떠세요?
+                </div>
+                {recs.map((m) => {
+                  const rimg = menuImageUrl(m.image_path);
+                  return (
+                    <div key={m.id} style={{ ...cardBox, padding: 10, marginBottom: 8, display: "flex", alignItems: "center", gap: 10 }}>
+                      <div style={{ width: 58, height: 46, borderRadius: 10, overflow: "hidden", flexShrink: 0, background: "linear-gradient(135deg,#8A5A3B 0%,#6E4126 60%,#4E2E1A 100%)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        {rimg ? (
+                          <img src={rimg} alt={m.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                        ) : (
+                          <span style={{ fontFamily: serif, fontSize: 9, color: "#FFF9EC", textAlign: "center", padding: 2 }}>{splitName(m.name).main}</span>
+                        )}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, fontSize: 14, wordBreak: "keep-all" }}>{splitName(m.name).main} 추가해 보세요</div>
+                        <div style={{ marginTop: 2, fontSize: 14, fontWeight: 700, color: ORDER.red }}>{wonLabel(m.price)}</div>
+                      </div>
+                      <button
+                        onClick={() => quickAdd(m)}
+                        style={{ padding: "11px 20px", borderRadius: 12, background: ORDER.red, color: "#FFF", fontWeight: 700, fontSize: 14, whiteSpace: "nowrap" }}
+                      >
+                        담기
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
 
           {err && <div style={{ color: ORDER.red, fontSize: 13, marginTop: 10 }}>{err}</div>}
         </div>
