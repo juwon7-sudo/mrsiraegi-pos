@@ -222,6 +222,9 @@ export default function OrderView({ customer = false }) {
     () => menu.filter((m) => qty[m.id] != null),
     [menu, qty]
   );
+  // 업셀 전용(메뉴판엔 숨김) 메뉴
+  const isUpsellOnly = (m) => UPSELL_NAMES.includes(splitName(m.name).main.trim());
+  const visibleMenu = useMemo(() => menu.filter((m) => !isUpsellOnly(m)), [menu]);
   const totalCount = selected.length;
   const totalPeople = selected.reduce((s, m) => s + (qty[m.id] || 0), 0);
   const totalAmount = selected.reduce((s, m) => s + m.price * (qty[m.id] || 0), 0);
@@ -899,16 +902,16 @@ export default function OrderView({ customer = false }) {
         <div className="app-scroll" style={{ flex: 1, overflowY: "auto", padding: "6px 18px 20px" }}>
           {loading && <div style={{ color: ORDER.muted }}>메뉴 불러오는 중…</div>}
           {err && <div style={{ color: ORDER.red }}>{err}</div>}
-          {!loading && menu.length === 0 && (
+          {!loading && visibleMenu.length === 0 && (
             <div style={{ color: ORDER.muted, textAlign: "center", marginTop: 40, fontSize: 13.5 }}>
               등록된 메뉴가 없습니다.
             </div>
           )}
 
           {/* 관리 순서(sort) 그대로. 종류(한상/단품)가 바뀌는 지점에만 제목 표시 */}
-          {menu.map((m, i) => {
+          {visibleMenu.map((m, i) => {
             const isH = (m.min_people || 1) >= 2;
-            const prev = menu[i - 1];
+            const prev = visibleMenu[i - 1];
             const prevIsH = prev ? (prev.min_people || 1) >= 2 : null;
             const showHeader = prevIsH === null || isH !== prevIsH;
             return (
@@ -1029,7 +1032,9 @@ export default function OrderView({ customer = false }) {
                         )}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontWeight: 700, fontSize: 15, wordBreak: "keep-all" }}>{splitName(m.name).main} 추가해 보세요</div>
+                        <div style={{ fontWeight: 700, fontSize: 15, wordBreak: "keep-all" }}>
+                          {splitName(m.name).main.includes("한접시") ? "한접시 추가" : `${splitName(m.name).main} 추가해 보세요`}
+                        </div>
                         <div style={{ marginTop: 3, fontSize: 15, fontWeight: 700, color: ORDER.red }}>{wonLabel(m.price)}</div>
                       </div>
                       <button
