@@ -25,6 +25,10 @@ function groupItems(items) {
   return groups;
 }
 
+// 장바구니 업셀: 아래 이름의 메뉴가 있으면 그것만 추천으로 노출(없으면 단품 메뉴), 제외 목록은 숨김
+const UPSELL_NAMES = ["직화 낙지볶음 한접시", "직화 제육볶음 한접시"];
+const UPSELL_EXCLUDE = ["꼬막비빔밥"];
+
 /* 주문 화면 — 라이트 크림 테마, 다단계 플로우 (테이블/인원 → 메뉴 → 확인) */
 export default function OrderView({ customer = false }) {
   const [step, setStep] = useState("table"); // table | menu | confirm | history
@@ -999,35 +1003,38 @@ export default function OrderView({ customer = false }) {
             );
           })}
 
-          {/* 추천(업셀) — 장바구니와 합계 사이. 담지 않은 단품 메뉴를 "추가해 보세요"로 권유 */}
+          {/* 추천(업셀) — 장바구니와 합계 사이. 지정 추천메뉴 우선, 없으면 단품(제외목록 숨김) */}
           {selected.length > 0 && !selected.some(isExclusive) && (() => {
-            const recs = menu
-              .filter((m) => (m.min_people || 1) === 1 && qty[m.id] == null && !isExclusive(m))
-              .slice(0, 3);
+            const avail = menu.filter((m) => qty[m.id] == null && !isExclusive(m));
+            const named = avail.filter((m) => UPSELL_NAMES.includes(splitName(m.name).main.trim()));
+            const recs = (named.length > 0
+              ? named
+              : avail.filter((m) => (m.min_people || 1) === 1 && !UPSELL_EXCLUDE.includes(splitName(m.name).main.trim()))
+            ).slice(0, 3);
             if (recs.length === 0) return null;
             return (
               <div style={{ marginTop: 10 }}>
-                <div style={{ fontFamily: serif, fontWeight: 700, fontSize: 15, color: ORDER.ink, margin: "2px 2px 8px" }}>
+                <div style={{ fontFamily: serif, fontWeight: 700, fontSize: 15, color: ORDER.ink, margin: "2px 2px 10px" }}>
                   이런 메뉴는 어떠세요?
                 </div>
                 {recs.map((m) => {
                   const rimg = menuImageUrl(m.image_path);
                   return (
-                    <div key={m.id} style={{ ...cardBox, padding: 10, marginBottom: 8, display: "flex", alignItems: "center", gap: 10 }}>
-                      <div style={{ width: 58, height: 46, borderRadius: 10, overflow: "hidden", flexShrink: 0, background: "linear-gradient(135deg,#8A5A3B 0%,#6E4126 60%,#4E2E1A 100%)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <div key={m.id} style={{ ...cardBox, padding: 13, marginBottom: 10, display: "flex", alignItems: "center", gap: 12 }}>
+                      <div style={{ width: 70, height: 56, borderRadius: 11, overflow: "hidden", flexShrink: 0, background: "linear-gradient(135deg,#8A5A3B 0%,#6E4126 60%,#4E2E1A 100%)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                         {rimg ? (
                           <img src={rimg} alt={m.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                         ) : (
-                          <span style={{ fontFamily: serif, fontSize: 9, color: "#FFF9EC", textAlign: "center", padding: 2 }}>{splitName(m.name).main}</span>
+                          <span style={{ fontFamily: serif, fontSize: 10, color: "#FFF9EC", textAlign: "center", padding: 2 }}>{splitName(m.name).main}</span>
                         )}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontWeight: 700, fontSize: 14, wordBreak: "keep-all" }}>{splitName(m.name).main} 추가해 보세요</div>
-                        <div style={{ marginTop: 2, fontSize: 14, fontWeight: 700, color: ORDER.red }}>{wonLabel(m.price)}</div>
+                        <div style={{ fontWeight: 700, fontSize: 15, wordBreak: "keep-all" }}>{splitName(m.name).main} 추가해 보세요</div>
+                        <div style={{ marginTop: 3, fontSize: 15, fontWeight: 700, color: ORDER.red }}>{wonLabel(m.price)}</div>
                       </div>
                       <button
                         onClick={() => quickAdd(m)}
-                        style={{ padding: "11px 20px", borderRadius: 12, background: ORDER.red, color: "#FFF", fontWeight: 700, fontSize: 14, whiteSpace: "nowrap" }}
+                        style={{ padding: "13px 22px", borderRadius: 12, background: ORDER.red, color: "#FFF", fontWeight: 700, fontSize: 15, whiteSpace: "nowrap" }}
                       >
                         담기
                       </button>
@@ -1049,18 +1056,24 @@ export default function OrderView({ customer = false }) {
           </div>
         )}
 
-        <BottomBar>
-          <button onClick={() => setStep("menu")} style={{ ...lightBtn, flex: 1 }}>
-            더 담기
-          </button>
-          <button
-            onClick={submitOrder}
-            disabled={submitting || selected.length === 0}
-            style={{ ...primaryBtn, flex: 2, fontSize: 18, opacity: submitting || selected.length === 0 ? 0.5 : 1 }}
-          >
-            {submitting ? "전송 중…" : `주문하기 (${totalCount})`}
-          </button>
-        </BottomBar>
+        {/* 하단 주문 영역 — 박스 처리 + 크게 */}
+        <div style={{ flex: "0 0 auto", padding: "10px 14px calc(12px + env(safe-area-inset-bottom))", background: ORDER.bg, borderTop: `1px solid ${ORDER.line}` }}>
+          <div style={{ display: "flex", gap: 12, padding: 12, border: `2px solid ${ORDER.red}`, borderRadius: 18, background: "#FFF" }}>
+            <button
+              onClick={() => setStep("menu")}
+              style={{ ...lightBtn, flex: 1, minHeight: 76, fontSize: 18, borderRadius: 14 }}
+            >
+              더 담기
+            </button>
+            <button
+              onClick={submitOrder}
+              disabled={submitting || selected.length === 0}
+              style={{ ...primaryBtn, flex: 2, minHeight: 76, fontSize: 25, borderRadius: 14, opacity: submitting || selected.length === 0 ? 0.5 : 1 }}
+            >
+              {submitting ? "전송 중…" : `주문하기 (${totalCount})`}
+            </button>
+          </div>
+        </div>
         {confirmModal}
       </div>
     );
