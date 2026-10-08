@@ -928,19 +928,22 @@ export default function OrderView({ customer = false }) {
           })}
         </div>
 
-        <BottomBar>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 700, fontSize: 15 }}>장바구니 {totalCount}개</div>
-            <div style={{ color: ORDER.muted, fontSize: 13 }}>{wonLabel(totalAmount)}</div>
+        {/* 하단 장바구니/주문 바 — 박스 처리 + 크게 */}
+        <div style={{ flex: "0 0 auto", padding: "10px 14px calc(12px + env(safe-area-inset-bottom))", background: ORDER.bg, borderTop: `1px solid ${ORDER.line}` }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, padding: 14, border: `2px solid ${ORDER.red}`, borderRadius: 18, background: "#FFF" }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 700, fontSize: 18 }}>장바구니 {totalCount}개</div>
+              <div style={{ color: ORDER.muted, fontSize: 15 }}>{wonLabel(totalAmount)}</div>
+            </div>
+            <button
+              disabled={totalCount === 0}
+              onClick={() => { setErr(""); setStep("cart"); }}
+              style={{ ...primaryBtn, width: "auto", padding: "0 34px", minHeight: 72, fontSize: 24, borderRadius: 14, opacity: totalCount === 0 ? 0.45 : 1 }}
+            >
+              주문하기
+            </button>
           </div>
-          <button
-            disabled={totalCount === 0}
-            onClick={() => { setErr(""); setStep("cart"); }}
-            style={{ ...primaryBtn, width: "auto", padding: "0 30px", fontSize: 17, opacity: totalCount === 0 ? 0.45 : 1 }}
-          >
-            주문하기
-          </button>
-        </BottomBar>
+        </div>
         {err && step === "menu" && (
           <div style={{ padding: "0 18px 10px", color: ORDER.red, fontSize: 13 }}>{err}</div>
         )}
